@@ -82,7 +82,90 @@
     font-size: 13px;
     transition: all .15s;
   }
+  .hbtn { display: grid; place-items: center; padding: 0; }
+  .hbtn svg { display: block; }
   .hbtn:hover { background: rgba(255,255,255,0.16); color: var(--text); }
+  .hbtn.on { background: rgba(126,224,255,0.18); color: var(--accent); }
+
+  /* ---------- 配置・サイズのポップオーバー ---------- */
+  .pop {
+    -webkit-app-region: no-drag;
+    position: absolute; top: 60px; right: 12px; z-index: 20;
+    width: 208px; padding: 10px 12px 12px;
+    border-radius: 16px;
+    background: rgba(14, 18, 34, 0.95);
+    border: 1px solid rgba(255,255,255,0.16);
+    box-shadow: 0 14px 34px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.12);
+    transform-origin: 100% 0;
+    animation: pop-in .16s ease-out;
+  }
+  .pop[hidden] { display: none; }
+  @keyframes pop-in { from { opacity: 0; transform: scale(.94) translateY(-4px); } }
+  .pop-h {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 11px; color: var(--muted); margin-bottom: 8px;
+  }
+  .pop-h b { color: var(--text); font-size: 12px; letter-spacing: .08em; }
+
+  kbd {
+    font: 600 10px/1 "Segoe UI", system-ui, sans-serif;
+    padding: 2px 5px; border-radius: 5px;
+    background: rgba(255,255,255,0.1); color: var(--muted);
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+  }
+
+  /* ミニ画面: 現在のウィンドウ位置を縮小表示し、隅をクリックで瞬間移動 */
+  .mini-wrap { position: relative; padding: 7px; }
+  .mini {
+    position: relative; width: 100%; aspect-ratio: 16 / 10;
+    border-radius: 7px; overflow: hidden;
+    background:
+      radial-gradient(120% 90% at 20% 0%, rgba(126,224,255,0.14), transparent 60%),
+      linear-gradient(160deg, #1b2440, #0d1224);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.16);
+  }
+  .q {
+    position: absolute; width: 50%; height: 50%;
+    border: none; background: transparent; cursor: pointer;
+    transition: background .12s;
+  }
+  .q.tl { top: 0; left: 0; } .q.tr { top: 0; right: 0; }
+  .q.bl { bottom: 0; left: 0; } .q.br { bottom: 0; right: 0; }
+  .q:hover { background: rgba(126,224,255,0.10); }
+  .ghost, .ghost-pre {
+    position: absolute; pointer-events: none; border-radius: 3px;
+    transition: left .28s cubic-bezier(.2,.8,.2,1), top .28s cubic-bezier(.2,.8,.2,1),
+                width .28s cubic-bezier(.2,.8,.2,1), height .28s cubic-bezier(.2,.8,.2,1);
+  }
+  .ghost {
+    background: linear-gradient(160deg, rgba(126,224,255,0.38), rgba(178,139,255,0.34));
+    border: 1px solid var(--accent);
+    box-shadow: 0 0 12px rgba(126,224,255,0.45);
+    padding: 3px 3px 0;
+  }
+  .ghost i { display: block; height: 2px; border-radius: 2px; background: rgba(255,255,255,0.55); margin-bottom: 3px; }
+  .ghost i:nth-child(2) { width: 70%; opacity: .7; }
+  .ghost i:nth-child(3) { width: 45%; opacity: .5; }
+  .ghost-pre { border: 1px dashed rgba(126,224,255,0.8); background: rgba(126,224,255,0.08); opacity: 0; transition: opacity .1s; }
+  .ghost-pre.show { opacity: 1; }
+  .qk { position: absolute; z-index: 2; pointer-events: none; }
+  .qk.tl { top: 0; left: 0; } .qk.tr { top: 0; right: 0; }
+  .qk.bl { bottom: 0; left: 0; } .qk.br { bottom: 0; right: 0; }
+  .qk.on { color: #0a0e1a; background: var(--accent); border-bottom-color: transparent; }
+
+  /* サイズ切替（小・中・大） */
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+  .seg button {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 7px 0 6px; border: none; border-radius: 10px; cursor: pointer;
+    background: rgba(255,255,255,0.06); color: var(--text);
+    font-size: 14px; font-weight: 700; line-height: 1;
+    transition: background .12s, transform .08s;
+  }
+  .seg button:hover { background: rgba(255,255,255,0.14); }
+  .seg button:active { transform: scale(.96); }
+  .seg button.on { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #0a0e1a; }
+  .seg button.on kbd { background: rgba(10,14,26,0.18); color: #0a0e1a; border-bottom-color: transparent; }
 
   .progress {
     margin: 4px 16px 10px;
@@ -302,9 +385,44 @@
         <h1>TODO</h1>
         <div class="sub" id="date"></div>
       </div>
-      <button class="hbtn" id="hide" title="隠す（トレイから再表示）">–</button>
-      <button class="hbtn" id="quit" title="終了">✕</button>
+      <button class="hbtn" id="layoutBtn" title="位置とサイズ">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+          <rect x="1.5" y="2.5" width="12" height="10" rx="2.2" stroke="currentColor" stroke-width="1.4"/>
+          <rect x="8.2" y="4.6" width="3.6" height="4.6" rx="1.1" fill="currentColor"/>
+        </svg>
+      </button>
+      <button class="hbtn" id="hide" title="隠す（トレイから再表示）">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M3 7h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button class="hbtn" id="quit" title="終了">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </button>
     </header>
+
+    <div class="pop" id="pop" hidden>
+      <div class="pop-h"><b>配置</b><span>Ctrl + Alt + キー</span></div>
+      <div class="mini-wrap">
+        <div class="mini" id="mini">
+          <button class="q tl" data-c="tl" aria-label="左上へ"></button>
+          <button class="q tr" data-c="tr" aria-label="右上へ"></button>
+          <button class="q bl" data-c="bl" aria-label="左下へ"></button>
+          <button class="q br" data-c="br" aria-label="右下へ"></button>
+          <div class="ghost-pre" id="ghostPre"></div>
+          <div class="ghost" id="ghost"><i></i><i></i><i></i></div>
+        </div>
+        <kbd class="qk tl" data-k="tl"></kbd><kbd class="qk tr" data-k="tr"></kbd>
+        <kbd class="qk bl" data-k="bl"></kbd><kbd class="qk br" data-k="br"></kbd>
+      </div>
+      <div class="seg" id="seg">
+        <button data-s="s">小<kbd></kbd></button>
+        <button data-s="m">中<kbd></kbd></button>
+        <button data-s="l">大<kbd></kbd></button>
+      </div>
+    </div>
 
     <div class="progress"><i id="bar"></i></div>
 
@@ -338,6 +456,7 @@
 </div>
 
 <script src="logic.js"></script>
+<script src="layout.js"></script>
 <script>
   const L = window.TodoLogic;
   const $ = (id) => document.getElementById(id);
@@ -654,6 +773,58 @@
   $('top').addEventListener('change', (e) => window.api.setPin(e.target.checked));
   window.api.onSettings(applySettings);
 
+  /* ---------- 配置・サイズ（ミニ画面） ---------- */
+  const G = window.GadgetLayout;
+  let lay = null;
+  const pct = (v) => (v * 100).toFixed(2) + '%';
+  const rectStyle = (node, b, wa) => {
+    node.style.left = pct((b.x - wa.x) / wa.width);
+    node.style.top = pct((b.y - wa.y) / wa.height);
+    node.style.width = pct(b.width / wa.width);
+    node.style.height = pct(b.height / wa.height);
+  };
+
+  function renderLayout(s) {
+    lay = s;
+    $('mini').style.aspectRatio = `${s.workArea.width} / ${s.workArea.height}`;
+    rectStyle($('ghost'), s.bounds, s.workArea);
+    document.querySelectorAll('.qk').forEach((k) => k.classList.toggle('on', k.dataset.k === s.corner));
+    document.querySelectorAll('#seg button').forEach((b) => b.classList.toggle('on', b.dataset.s === s.size));
+  }
+
+  function initLayoutUi() {
+    const S = G.SHORTCUTS;
+    document.querySelectorAll('.qk').forEach((k) => { k.textContent = S.corners[k.dataset.k]; });
+    document.querySelectorAll('#seg button').forEach((b) => {
+      b.querySelector('kbd').textContent = S.sizes[b.dataset.s];
+      b.onclick = () => window.api.sizePreset(b.dataset.s);
+    });
+    document.querySelectorAll('.q').forEach((q) => {
+      const c = q.dataset.c;
+      q.onclick = () => window.api.snap(c);
+      // ホバーで「ここに移動します」の点線プレビュー
+      q.onmouseenter = () => {
+        if (!lay) return;
+        rectStyle($('ghostPre'), G.cornerBounds(lay.workArea, c, lay.bounds), lay.workArea);
+        $('ghostPre').classList.add('show');
+      };
+      q.onmouseleave = () => $('ghostPre').classList.remove('show');
+    });
+
+    const pop = $('pop');
+    const setOpen = async (open) => {
+      pop.hidden = !open;
+      $('layoutBtn').classList.toggle('on', open);
+      if (open) renderLayout(await window.api.layoutState());
+    };
+    $('layoutBtn').onclick = () => setOpen(pop.hidden);
+    document.addEventListener('mousedown', (e) => {
+      if (!pop.hidden && !pop.contains(e.target) && !$('layoutBtn').contains(e.target)) setOpen(false);
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pop.hidden) setOpen(false); });
+    window.api.onLayout(renderLayout);
+  }
+
   function updateDate() {
     const d = new Date();
     const w = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
@@ -665,6 +836,7 @@
     todos = L.normalize(data.todos);
     document.documentElement.classList.toggle('native', !!(data.env && data.env.nativeBlur));
     applySettings(data.settings);
+    initLayoutUi();
     updateDate();
     setInterval(updateDate, 60 * 1000);
     render();

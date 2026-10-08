@@ -3,7 +3,7 @@
 ## テストフレームワーク
 
 - Node.js 組み込みの `node:test` + `node:assert`(追加依存なし)
-- 対象は `app/logic.js`(UI非依存の純粋ロジック)。テストは `app/logic.test.js` に置く
+- 対象は `app/logic.js` と `app/layout.js`(UI非依存の純粋ロジック)。テストは同名の `app/*.test.js` に置く
 - `main.js` / `index.html` は Electron / DOM 依存のため自動テスト対象外(手動確認)
 - TDD(探索 → Red → Green → Refactoring)で進める
 

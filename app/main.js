@@ -1,6 +1,7 @@
-const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, screen } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, screen, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const Lay = require('./layout.js');
 
 const dataFile = () => path.join(app.getPath('userData'), 'todo-data.json');
 
@@ -60,13 +61,11 @@ let win = null;
 let tray = null;
 
 function createWindow() {
-  const { workArea } = screen.getPrimaryDisplay();
-  const b = data.settings.bounds || {
-    width: 380,
-    height: 560,
-    x: workArea.x + workArea.width - 380 - 24,
-    y: workArea.y + 24
-  };
+  // 保存済み位置は、モニター構成が変わっても画面内へ引き戻す（見えなくなる事故の予防）
+  const saved = data.settings.bounds;
+  const b = saved
+    ? Lay.fitInside(saved, screen.getDisplayMatching(saved).workArea)
+    : Lay.cornerBounds(screen.getPrimaryDisplay().workArea, 'tr', Lay.SIZES.m);
 
   const glass = nativeBlur
     ? { backgroundMaterial: data.settings.material, backgroundColor: '#00000000', hasShadow: true }
@@ -76,8 +75,8 @@ function createWindow() {
 
   win = new BrowserWindow({
     ...b,
-    minWidth: 300,
-    minHeight: 280,
+    minWidth: Lay.MIN.width,
+    minHeight: Lay.MIN.height,
     frame: false,
     resizable: true,
     skipTaskbar: true,
@@ -98,9 +97,63 @@ function createWindow() {
     scheduleSave();
   };
   let t;
-  const debounced = () => { clearTimeout(t); t = setTimeout(persistBounds, 400); };
-  win.on('move', debounced);
-  win.on('resize', debounced);
+  let u;
+  const onBoundsChanged = () => {
+    clearTimeout(t); t = setTimeout(persistBounds, 400);
+    clearTimeout(u); u = setTimeout(sendLayout, 60);
+  };
+  win.on('move', onBoundsChanged);
+  win.on('resize', onBoundsChanged);
+}
+
+/* ---------- 位置・サイズのプリセット ---------- */
+const currentArea = () => screen.getDisplayMatching(win.getBounds()).workArea;
+
+function layoutState() {
+  const bounds = win.getBounds();
+  const workArea = currentArea();
+  return {
+    bounds,
+    workArea,
+    corner: Lay.detectCorner(bounds, workArea),
+    size: Lay.detectSize(bounds, workArea)
+  };
+}
+
+function sendLayout() {
+  if (win && !win.isDestroyed()) win.webContents.send('layout-changed', layoutState());
+}
+
+// 隠れていても・最小化されていても、操作したら必ず手前に出す
+function reveal() {
+  if (win.isMinimized()) win.restore();
+  if (!win.isVisible()) win.show();
+}
+
+function snapTo(corner) {
+  if (!win || !Lay.CORNERS.includes(corner)) return;
+  reveal();
+  win.setBounds(Lay.cornerBounds(currentArea(), corner, win.getBounds()));
+  sendLayout();
+}
+
+function setSizePreset(key) {
+  if (!win || !Lay.SIZES[key]) return;
+  reveal();
+  win.setBounds(Lay.resizeAnchored(win.getBounds(), currentArea(), key));
+  sendLayout();
+}
+
+function registerShortcuts() {
+  const { modifier, corners, sizes, toggle } = Lay.SHORTCUTS;
+  const bind = (key, fn) => {
+    if (!globalShortcut.register(`${modifier}+${key}`, fn)) {
+      console.warn(`shortcut ${modifier}+${key} is already in use`);
+    }
+  };
+  Lay.CORNERS.forEach((c) => bind(corners[c], () => snapTo(c)));
+  Object.keys(Lay.SIZES).forEach((k) => bind(sizes[k], () => setSizePreset(k)));
+  bind(toggle, toggleWindow);
 }
 
 // 最前面の変更はここに集約(トレイ・フッターのスイッチ共通)
@@ -134,7 +187,25 @@ function buildTray() {
   tray = new Tray(icon);
   tray.setToolTip('Todo Gadget');
   const menu = Menu.buildFromTemplate([
-    { label: '表示 / 非表示', click: toggleWindow },
+    { label: '表示 / 非表示', accelerator: `${Lay.SHORTCUTS.modifier}+${Lay.SHORTCUTS.toggle}`, registerAccelerator: false, click: toggleWindow },
+    {
+      label: '位置',
+      submenu: [['tl', '左上'], ['tr', '右上'], ['bl', '左下'], ['br', '右下']].map(([c, label]) => ({
+        label,
+        accelerator: `${Lay.SHORTCUTS.modifier}+${Lay.SHORTCUTS.corners[c]}`,
+        registerAccelerator: false,
+        click: () => snapTo(c)
+      }))
+    },
+    {
+      label: 'サイズ',
+      submenu: [['s', '小'], ['m', '中'], ['l', '大']].map(([k, label]) => ({
+        label,
+        accelerator: `${Lay.SHORTCUTS.modifier}+${Lay.SHORTCUTS.sizes[k]}`,
+        registerAccelerator: false,
+        click: () => setSizePreset(k)
+      }))
+    },
     ...(isWin11 ? [{
       label: '背景（変更すると再起動）',
       submenu: [
@@ -186,8 +257,12 @@ if (!gotLock) {
     nativeBlur = isWin11 && data.settings.material !== 'transparent';
     createWindow();
     buildTray();
+    registerShortcuts();
 
     ipcMain.handle('load', () => ({ ...data, env: { nativeBlur } }));
+    ipcMain.handle('layout-state', () => layoutState());
+    ipcMain.on('snap', (_e, corner) => snapTo(corner));
+    ipcMain.on('size-preset', (_e, key) => setSizePreset(key));
     ipcMain.on('save-todos', (_e, todos) => { data.todos = todos; scheduleSave(); });
     ipcMain.on('set-opacity', (_e, v) => { data.settings.opacity = v; scheduleSave(); });
     ipcMain.on('set-pin', (_e, on) => setPin(on));
@@ -196,6 +271,7 @@ if (!gotLock) {
   });
 
   app.on('before-quit', flushSave);
+  app.on('will-quit', () => globalShortcut.unregisterAll());
 
   app.on('window-all-closed', (e) => e.preventDefault());
 }

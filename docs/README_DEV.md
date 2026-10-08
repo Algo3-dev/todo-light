@@ -29,6 +29,8 @@ TodoGadget-light/
 │  ├─ main.js        Electronメインプロセス(ウィンドウ/トレイ/保存/IPC)
 │  ├─ preload.js     contextBridgeでwindow.apiを公開
 │  ├─ logic.js       親子・先行関係の純粋ロジック(UMD。Node/ブラウザ両対応)
+│  ├─ layout.js      ウィンドウの隅配置・サイズ・画面内への引き戻しの純粋ロジックとショートカット定義(UMD)
+│  ├─ *.test.js      logic.js / layout.js の単体テスト(配布物には含めない)
 │  ├─ index.html     UI(CSS/JSインライン)
 │  └─ package.json
 ├─ TodoGadget.bat    起動(初回にElectron自動DL) / TodoGadget.vbs: 窓なし起動
