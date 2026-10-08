@@ -21,7 +21,7 @@ if exist "%RT%\TodoGadget.exe" goto run
 echo [Setup] First run only: downloading Electron %VER% (about 115MB)...
 if exist "%RT%" rmdir /s /q "%RT%"
 mkdir "%RT%"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; try { Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/electron/electron/releases/download/v%VER%/electron-v%VER%-win32-x64.zip' -OutFile '%RT%\electron.zip' } catch { Write-Host $_; exit 1 }; $h=(Get-FileHash -Algorithm SHA256 '%RT%\electron.zip').Hash; if ($h -ne '%SHA256%') { Write-Host ('Checksum mismatch: ' + $h); exit 2 }; try { Expand-Archive -Force -Path '%RT%\electron.zip' -DestinationPath '%RT%' } catch { Write-Host $_; exit 1 }"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; try { Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/electron/electron/releases/download/v%VER%/electron-v%VER%-win32-x64.zip' -OutFile '%RT%\electron.zip' } catch { Write-Host $_; exit 1 }; $f=[IO.File]::OpenRead('%RT%\electron.zip'); try { $h=[BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash($f)).Replace('-','') } finally { $f.Close() }; if ($h -ne '%SHA256%') { Write-Host ('Checksum mismatch: ' + $h); exit 2 }; try { Expand-Archive -Force -Path '%RT%\electron.zip' -DestinationPath '%RT%' } catch { Write-Host $_; exit 1 }"
 if errorlevel 2 goto badsum
 if errorlevel 1 goto dlfail
 del "%RT%\electron.zip" 2>nul
