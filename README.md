@@ -2,6 +2,8 @@
 
 Windows 11 のデスクトップに常駐する、半透明ガラス風の Todo ガジェット。親子タスク・先行関係(完了順の制約)・期限をマウスだけで設定できる。
 
+> **個人用ツールです。** 自分が使うために作っており、更新は不定期です。Issue・Pull Request への対応や動作の保証はできません。[MIT ライセンス](LICENSE)のもと、自由に fork・改変して使ってください。
+
 ## ダウンロード
 
 [Releases](../../releases) から最新の `TodoGadget-<バージョン>.zip` を取得する。リポジトリを clone した場合は `scripts\dist.bat` で同じ ZIP を作れる。
@@ -102,4 +104,4 @@ Windows 11 のデスクトップに常駐する、半透明ガラス風の Todo 
 
 [MIT License](LICENSE)
 
-開発者向け情報は [docs/README_DEV.md](docs/README_DEV.md)、開発ルールは [AGENTS.md](AGENTS.md) を参照。
+開発者向け情報は [docs/README_DEV.md](docs/README_DEV.md) を参照。

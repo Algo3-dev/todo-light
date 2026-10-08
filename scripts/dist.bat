@@ -1,5 +1,5 @@
 @echo off
-rem NOTE: keep this file ASCII only (no Japanese). See AGENTS.md.
+rem NOTE: keep this file ASCII only (no Japanese): cmd.exe under chcp 65001 mis-splits lines with multibyte characters.
 rem Creates the distribution zip. Runs the quality gate (build.bat) first.
 setlocal
 call "%~dp0build.bat"

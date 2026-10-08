@@ -50,7 +50,6 @@ TodoGadget-light/
 ├─ scripts/          build.bat(品質ゲート) / dist.bat(配布ZIP)
 ├─ config/
 ├─ docs/
-├─ AGENTS.md         AIエージェント向けルールの正本
 ├─ README.md         利用者向け
 ├─ LICENSE           MIT
 ├─ .gitattributes    bat/vbs を CRLF に固定

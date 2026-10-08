@@ -5,3 +5,9 @@ docs/tmp/*
 
 # 配布物
 dist/
+
+# AIエージェント向けの個人用指示(公開しない。ローカルには残す)
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+.github/copilot-instructions.md
