@@ -1,7 +1,10 @@
 @echo off
 rem NOTE: keep this file ASCII only (no Japanese). See AGENTS.md.
-rem Creates the distribution zip (run after build.bat).
+rem Creates the distribution zip. Runs the quality gate (build.bat) first.
 setlocal
+call "%~dp0build.bat"
+if errorlevel 1 exit /b 1
+
 set "ROOT=%~dp0.."
 set /p VER=<"%ROOT%\VERSION"
 set "OUT=%ROOT%\dist\TodoGadget"
@@ -18,7 +21,8 @@ copy /y "%ROOT%\RemoveFromStartup.bat" "%OUT%" >nul
 copy /y "%ROOT%\README.md" "%OUT%" >nul
 copy /y "%ROOT%\VERSION" "%OUT%" >nul
 
-powershell -NoProfile -Command "Compress-Archive -Force -Path '%OUT%\*' -DestinationPath '%ROOT%\dist\TodoGadget-%VER%.zip'"
+rem Zip the folder itself so extracting creates a TodoGadget folder
+powershell -NoProfile -Command "Compress-Archive -Force -Path '%OUT%' -DestinationPath '%ROOT%\dist\TodoGadget-%VER%.zip'"
 if errorlevel 1 exit /b 1
 
 endlocal
