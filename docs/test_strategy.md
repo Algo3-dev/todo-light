@@ -19,7 +19,7 @@ node --test app/*.test.js
 
 目標値はここを正本とする(グローバル設定には書かない)。
 
-- `app/logic.js`: 行・分岐とも 90% 以上を目標(`node --test --experimental-test-coverage app/*.test.js` で計測。現状 行99.4% / 分岐98.0%)
+- `app/logic.js`: 行・分岐とも 90% 以上を目標(`node --test --experimental-test-coverage app/*.test.js` で計測。現状 logic.js 行99.5% / 分岐98.5%、layout.js 行99.0% / 分岐94.6%)
 - UI / メインプロセス: 目標値なし(手動確認)
 
 ## モック方針
