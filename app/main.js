@@ -2,6 +2,7 @@ const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, screen, globalShor
 const path = require('path');
 const fs = require('fs');
 const Lay = require('./layout.js');
+const Theme = require('./theme.js');
 
 const dataFile = () => path.join(app.getPath('userData'), 'todo-data.json');
 
@@ -9,7 +10,7 @@ const os = require('os');
 
 const defaults = {
   todos: [],
-  settings: { opacity: 0.82, alwaysOnTop: false, bounds: null, material: 'acrylic' }
+  settings: { opacity: 0.82, alwaysOnTop: false, bounds: null, material: 'acrylic', baseColor: Theme.DEFAULT_BASE }
 };
 
 // Windows 11 22H2 (build 22621) 以降ならOS標準のアクリル/マイカが使える
@@ -305,6 +306,7 @@ if (!gotLock) {
   app.whenReady().then(() => {
     data = loadData();
     if (!MATERIALS.includes(data.settings.material)) data.settings.material = 'acrylic';
+    if (!Theme.isValidBase(data.settings.baseColor)) data.settings.baseColor = Theme.DEFAULT_BASE;
     nativeBlur = isWin11 && data.settings.material !== 'transparent';
     createWindow();
     registerShortcuts();
@@ -314,6 +316,11 @@ if (!gotLock) {
       ...data,
       env: { nativeBlur, win11: isWin11, material: data.settings.material, shortcuts: shortcutMap }
     }));
+    ipcMain.on('set-base-color', (_e, v) => {
+      if (!Theme.isValidBase(v)) return; // 不正な値は保存しない
+      data.settings.baseColor = v;
+      scheduleSave();
+    });
     ipcMain.on('set-material', (_e, id) => setMaterial(id));
     ipcMain.handle('layout-state', () => layoutState());
     ipcMain.on('toggle-collapse', toggleCollapse);

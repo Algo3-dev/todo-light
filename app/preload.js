@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('api', {
   setPin: (on) => ipcRenderer.send('set-pin', on),
   hide: () => ipcRenderer.send('hide'),
   quit: () => ipcRenderer.send('quit'),
+  setBaseColor: (v) => ipcRenderer.send('set-base-color', v),
   setMaterial: (id) => ipcRenderer.send('set-material', id),
   toggleCollapse: () => ipcRenderer.send('toggle-collapse'),
   onCollapsed: (cb) => ipcRenderer.on('collapsed-changed', (_e, v) => cb(v)),
