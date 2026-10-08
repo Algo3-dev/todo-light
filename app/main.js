@@ -225,6 +225,22 @@ function setPin(on) {
   win.webContents.send('settings-changed', data.settings);
 }
 
+// リマインド時刻になったら、隠れていても・折りたたみ中でも・他のウィンドウの後ろでも前面に出す。
+// 入力中の作業を邪魔しないよう、フォーカスは奪わない。最前面は一時的で、通常設定に戻す
+let alertTimer = null;
+function alertFront() {
+  if (!win || win.isDestroyed()) return;
+  setCollapsed(false);
+  if (win.isMinimized()) win.restore();
+  if (!win.isVisible()) win.showInactive();
+  win.setAlwaysOnTop(true, 'screen-saver');
+  win.moveTop();
+  clearTimeout(alertTimer);
+  alertTimer = setTimeout(() => {
+    if (win && !win.isDestroyed()) win.setAlwaysOnTop(!!data.settings.alwaysOnTop, 'floating');
+  }, 8000);
+}
+
 function toggleWindow() {
   if (!win) return;
   if (win.isVisible()) win.hide();
@@ -341,6 +357,7 @@ if (!gotLock) {
       scheduleSave();
     });
     ipcMain.on('set-pin', (_e, on) => setPin(on));
+    ipcMain.on('alert-front', alertFront);
     ipcMain.on('hide', () => win.hide());
     ipcMain.on('quit', () => app.quit());
   });

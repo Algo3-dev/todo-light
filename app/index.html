@@ -185,8 +185,14 @@
   }
 
   .add { padding: 0 16px 8px; }
-  .add input {
+  .add textarea {
+    display: block;
     width: 100%;
+    resize: none;
+    overflow-y: auto;
+    max-height: 140px;
+    font-family: inherit;
+    line-height: 1.4;
     padding: 10px 14px;
     border-radius: 12px;
     border: 1px solid rgba(255,255,255,0.12);
@@ -197,8 +203,8 @@
     user-select: text;
     transition: all .15s;
   }
-  .add input::placeholder { color: var(--muted); }
-  .add input:focus {
+  .add textarea::placeholder { color: var(--muted); }
+  .add textarea:focus {
     border-color: rgba(126,224,255,0.6);
     background: rgba(126,224,255,0.07);
     box-shadow: 0 0 0 3px rgba(126,224,255,0.12);
@@ -283,6 +289,7 @@
     flex: 1; min-width: 0;
     font-size: 13px; line-height: 1.4;
     word-break: break-word;
+    white-space: pre-wrap; /* 複数行のタスク文の改行を保持 */
     cursor: text;
     user-select: text;
     min-height: 1.4em;
@@ -460,6 +467,95 @@
   li.done .due { opacity: .45; }
   .date-in { position: absolute; right: 8px; top: 4px; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 
+  /* ---------- ポップアップの外側クリックで閉じるための全面レイヤー ---------- */
+  /* タイトルバー(ドラッグ領域)上のクリックも拾えるよう no-drag にする */
+  .pop-back { position: absolute; inset: 0; z-index: 15; -webkit-app-region: no-drag; }
+  .pop-back[hidden] { display: none; }
+  header .hbtn { position: relative; z-index: 16; }
+
+  /* ---------- 最前面ピン(タイトルバー) ---------- */
+  .hbtn.pin svg { transform: rotate(40deg); transition: transform .28s cubic-bezier(.3,1.5,.5,1); }
+  .hbtn.pin.on svg { transform: rotate(0deg) translateY(-1px); }
+  .hbtn.pin.on { box-shadow: 0 0 10px rgba(126,224,255,0.4); }
+
+  /* ---------- リマインド ---------- */
+  .rem {
+    flex: none; display: inline-flex; align-items: center; gap: 3px;
+    border: none; cursor: pointer; white-space: nowrap;
+    font: 600 10px/1 "Segoe UI", "Yu Gothic UI", system-ui, sans-serif;
+    padding: 3px 7px 3px 5px; border-radius: 8px;
+    background: rgba(178,139,255,0.16); color: #d9c6ff;
+    transition: background .15s, color .15s;
+  }
+  .rem:hover { background: rgba(178,139,255,0.3); color: #fff; }
+  .rem svg { display: block; }
+  li.done .rem { opacity: .45; }
+
+  /* 時刻になったタスク: 琥珀色の脈動と、ベルの揺れ */
+  li.ringing::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 0;
+    animation: ring-pulse 1.15s ease-in-out infinite;
+  }
+  li.ringing .rem { background: #ffc850; color: #2a1c00; animation: ring-chip 1.15s ease-in-out infinite; }
+  li.ringing .rem svg { transform-origin: 50% 20%; animation: bell-swing 1.15s ease-in-out infinite; }
+  @keyframes ring-pulse {
+    0%, 100% { background: rgba(255,200,80,0.08); box-shadow: inset 3px 0 0 rgba(255,200,80,0.9), 0 0 0 rgba(255,200,80,0); }
+    50%      { background: rgba(255,200,80,0.26); box-shadow: inset 3px 0 0 #ffc850, 0 0 20px rgba(255,200,80,0.5); }
+  }
+  @keyframes ring-chip { 50% { box-shadow: 0 0 10px rgba(255,200,80,0.85); } }
+  @keyframes bell-swing {
+    0%, 55%, 100% { transform: rotate(0); }
+    10% { transform: rotate(18deg); } 20% { transform: rotate(-16deg); } 30% { transform: rotate(12deg); }
+    40% { transform: rotate(-8deg); } 50% { transform: rotate(4deg); }
+  }
+
+  /* 確認 / スヌーズのバー(鳴っている間だけ行の下に出る) */
+  .ringbar { display: flex; gap: 6px; padding: 0 8px 8px 46px; position: relative; z-index: 1; animation: ringbar-in .28s cubic-bezier(.2,.9,.3,1.2); }
+  @keyframes ringbar-in { from { opacity: 0; transform: translateY(-6px); } }
+  .ringbar button {
+    border: none; cursor: pointer; font: 600 11px/1 "Segoe UI", "Yu Gothic UI", system-ui, sans-serif;
+    padding: 6px 11px; border-radius: 9px; color: var(--text);
+    background: rgba(255,255,255,0.1); transition: background .12s, transform .1s;
+  }
+  .ringbar button:hover { background: rgba(255,255,255,0.2); }
+  .ringbar button:active { transform: scale(.95); }
+  .ringbar button.ok { background: linear-gradient(135deg, #ffc850, #ffa24a); color: #2a1c00; }
+  .ringbar button.ok:hover { filter: brightness(1.1); background: linear-gradient(135deg, #ffc850, #ffa24a); }
+
+  /* ウィンドウが前面に出た瞬間、縁が一度だけ光る */
+  .panel.alert::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 30;
+    animation: panel-flash 1.8s ease-out forwards;
+  }
+  @keyframes panel-flash {
+    0%   { box-shadow: inset 0 0 0 2px rgba(255,200,80,0.95), inset 0 0 60px rgba(255,200,80,0.45); }
+    100% { box-shadow: inset 0 0 0 0 rgba(255,200,80,0), inset 0 0 0 rgba(255,200,80,0); }
+  }
+
+  /* リマインド設定ポップオーバー */
+  .pop.remind { width: 232px; }
+  .rchips { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 0 8px; }
+  .rchips button, .rfoot button {
+    border: none; cursor: pointer; font-size: 11px; padding: 6px 10px; border-radius: 9px;
+    background: rgba(255,255,255,0.08); color: var(--text); transition: background .12s, transform .1s;
+  }
+  .rchips button:hover, .rfoot button:hover { background: rgba(178,139,255,0.3); }
+  .rchips button:active, .rfoot button:active { transform: scale(.95); }
+  .remind input[type=datetime-local] {
+    width: 100%; padding: 7px 9px; border-radius: 9px; font: inherit; font-size: 12px;
+    color: var(--text); background: rgba(255,255,255,0.07); color-scheme: dark;
+    border: 1px solid rgba(255,255,255,0.14); outline: none;
+  }
+  .remind input[type=datetime-local]:focus { border-color: rgba(178,139,255,0.7); }
+  .rfoot { display: flex; gap: 6px; margin-top: 8px; }
+  .rfoot .go { flex: 1; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #0a0e1a; font-weight: 700; }
+  .rfoot .go:hover { background: linear-gradient(135deg, var(--accent), var(--accent2)); filter: brightness(1.1); }
+  .rfoot .off:hover { background: rgba(255,122,138,0.25); }
+
+  @media (prefers-reduced-motion: reduce) {
+    li.ringing::after, li.ringing .rem, li.ringing .rem svg { animation-duration: 3s; }
+  }
+
   /* ---------- タイトルバーだけ表示(折りたたみ) ---------- */
   .ic-dn { display: none; }
   html.collapsed .ic-up { display: none; }
@@ -479,7 +575,13 @@
         <h1>TODO LIGHT</h1>
         <div class="sub" id="sub"></div>
       </div>
-      <button class="hbtn" id="lookBtn" title="外観（透過度・背景・最前面）">
+      <button class="hbtn pin" id="pinBtn" title="常に最前面（オフ）">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 2h5l-.6 4.2 1.9 2.1H3.7l1.9-2.1z"/>
+          <path d="M7.5 8.4V13"/>
+        </svg>
+      </button>
+      <button class="hbtn" id="lookBtn" title="外観（透過度・背景色・背景素材）">
         <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
           <circle cx="7.5" cy="7.5" r="5.4" stroke="currentColor" stroke-width="1.4"/>
           <path d="M7.5 2.1a5.4 5.4 0 010 10.8z" fill="currentColor"/>
@@ -509,6 +611,8 @@
       </button>
     </header>
 
+    <div class="pop-back" id="popBack" hidden></div>
+
     <div class="pop wide" id="popLook" hidden>
       <div class="pop-h"><b>外観</b></div>
       <div class="prow">
@@ -528,12 +632,15 @@
           <button data-m="mica">マイカ</button>
         </div>
       </div>
-      <div class="prow">
-        <span class="pl">常に最前面</span>
-        <label class="switch" title="常に最前面に表示">
-          <input type="checkbox" id="top">
-          <i class="track"></i>
-        </label>
+    </div>
+
+    <div class="pop remind" id="popRemind" hidden>
+      <div class="pop-h"><b>リマインド</b><span id="remTask"></span></div>
+      <div class="rchips" id="remChips"></div>
+      <input type="datetime-local" id="remAt">
+      <div class="rfoot">
+        <button class="go" id="remSet">この時刻に設定</button>
+        <button class="off" id="remOff">解除</button>
       </div>
     </div>
 
@@ -562,7 +669,7 @@
     <div class="progress"><i id="bar"></i></div>
 
     <div class="add">
-      <input id="input" type="text" placeholder="タスクを追加して Enter" maxlength="200" autocomplete="off">
+      <textarea id="input" rows="1" placeholder="タスクを追加して Enter（Shift+Enter で改行）" maxlength="1000" autocomplete="off"></textarea>
     </div>
 
     <ul id="list"></ul>
@@ -598,7 +705,9 @@
     cal: sv(14, 14, '<rect x="2" y="3" width="10" height="9" rx="2"/><path d="M2 6.2h10M4.8 1.8v2.4M9.2 1.8v2.4"/>'),
     link: sv(14, 14, '<circle cx="3.6" cy="7" r="1.9"/><circle cx="10.4" cy="7" r="1.9"/><path d="M5.5 7h3"/>'),
     del: sv(14, 14, '<path d="M4 4l6 6M10 4l-6 6"/>'),
-    xs: sv(8, 8, '<path d="M2 2l4 4M6 2L2 6"/>')
+    xs: sv(8, 8, '<path d="M2 2l4 4M6 2L2 6"/>'),
+    bell: sv(14, 14, '<path d="M3.4 10.2h7.2c-.9-.9-1.2-1.8-1.2-3.4a2.4 2.4 0 00-4.8 0c0 1.6-.3 2.5-1.2 3.4z"/><path d="M5.9 11.9a1.2 1.2 0 002.2 0"/>'),
+    bellS: sv(11, 11, '<path d="M2.7 8h5.6c-.7-.7-.9-1.4-.9-2.6a1.9 1.9 0 00-3.8 0c0 1.2-.2 1.9-.9 2.6z"/><path d="M4.6 9.4a1 1 0 001.8 0"/>')
   };
   const icon = (cls, key, title) => {
     const b = el('button', cls);
@@ -719,10 +828,12 @@
     const hasKids = todos.some((x) => x.parentId === t.id);
     const blocked = L.isBlocked(todos, t);
     const succs = todos.filter((x) => x.after.includes(t.id));
+    const rs = L.remindState(t);
 
     const li = el('li');
     li.dataset.id = t.id;
     if (t.done) li.classList.add('done');
+    if (rs === 'ringing') li.classList.add('ringing');
     if (blocked && !t.done) li.classList.add('blocked');
     if (depth > 0) { li.classList.add('sub'); li.style.marginLeft = depth * 18 + 'px'; }
 
@@ -776,6 +887,16 @@
       row.append(chip);
     }
 
+    if (rs === 'pending' || rs === 'ringing') {
+      const rem = el('button', 'rem');
+      const ic = el('span');
+      ic.innerHTML = ICON.bellS;
+      rem.append(ic, el('span', null, L.remindLabel(t.remind)));
+      rem.title = 'リマインド: ' + t.remind.replace('T', ' ') + '（クリックで変更）';
+      rem.onclick = () => openRemind(t, li);
+      row.append(rem);
+    }
+
     if (hasKids) {
       const ds = L.descendants(todos, t.id);
       row.append(el('span', 'badge', `${ds.filter((d) => d.done).length}/${ds.length}`));
@@ -804,10 +925,24 @@
     link.addEventListener('dragend', endDrag);
     const del = icon('act del', 'del', '削除（子タスクは一つ上の階層へ）');
     del.onclick = () => { todos = L.removeTask(todos, t.id); save(); render(); };
-    acts.append(cal, link, del);
+    const bell = icon('act', 'bell', t.remind && rs !== 'ack' ? 'リマインドを変更・解除' : 'リマインドを設定');
+    bell.onclick = () => openRemind(t, li);
+    acts.append(bell, cal, link, del);
     row.append(acts);
     li.append(row, dueIn);
     dueView(li, t);
+
+    if (rs === 'ringing') {
+      const bar = el('div', 'ringbar');
+      const btn = (cls, label, fn) => { const b = el('button', cls, label); b.onclick = fn; return b; };
+      const after = (fn) => () => { fn(); save(); render(); };
+      bar.append(
+        btn('ok', '確認', after(() => L.ackRemind(todos, t.id))),
+        btn('', '10分後', after(() => L.snoozeRemind(todos, t.id, 10))),
+        btn('', '1時間後', after(() => L.snoozeRemind(todos, t.id, 60)))
+      );
+      li.append(bar);
+    }
 
     if (t.after.length) {
       const deps = el('div', 'deps');
@@ -864,7 +999,7 @@
 
   /* ---------- 編集・追加 ---------- */
   function startEdit(node, t) {
-    node.contentEditable = 'true';
+    node.contentEditable = 'plaintext-only'; // 書式なしで貼り付け。Shift+Enter は \n になる
     node.focus();
     const range = document.createRange();
     range.selectNodeContents(node);
@@ -876,19 +1011,19 @@
       if (finished) return;
       finished = true;
       node.contentEditable = 'false';
-      const v = node.textContent.trim();
+      const v = L.cleanText(node.innerText);
       if (v) t.text = v; else todos = L.removeTask(todos, t.id);
       save(); render();
     };
     node.onblur = finish;
     node.onkeydown = (e) => {
-      if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); node.blur(); }
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); node.blur(); }
       if (e.key === 'Escape') { node.textContent = t.text; node.blur(); }
     };
   }
 
   function addChild(parent) {
-    const c = { id: L.uid(), text: '', done: false, parentId: parent.id, after: [], collapsed: false, due: null };
+    const c = L.newTask('', parent.id);
     parent.collapsed = false;
     todos.push(c);
     render();
@@ -896,13 +1031,18 @@
     if (node) startEdit(node, c);
   }
 
+  // 入力欄は内容の行数に合わせて高さを伸ばす(上限は CSS の max-height)
+  const fitInput = () => { const n = $('input'); n.style.height = 'auto'; n.style.height = n.scrollHeight + 'px'; };
+  $('input').addEventListener('input', fitInput);
   $('input').addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter' || e.isComposing) return;
-    const v = e.target.value.trim();
+    if (e.key !== 'Enter' || e.shiftKey || e.isComposing) return;
+    e.preventDefault(); // 改行を入れずに確定する
+    const v = L.cleanText(e.target.value);
     if (!v) return;
-    const t = { id: L.uid(), text: v, done: false, parentId: null, after: [], collapsed: false, due: null };
+    const t = L.newTask(v);
     todos.push(t);
     e.target.value = '';
+    fitInput();
     save(); render();
     const n = itemEl(t.id);
     if (n) n.scrollIntoView({ block: 'nearest' });
@@ -936,12 +1076,16 @@
 
   /* ---------- 設定（透過度・最前面） ---------- */
   let opTimer;
+  let pinned = false;
+  $('pinBtn').onclick = () => window.api.setPin(!pinned);
   function applySettings(s) {
     document.documentElement.style.setProperty('--op', s.opacity);
     const pct = Math.round((1 - s.opacity) * 100);
     $('tr').value = pct;
     $('trv').textContent = pct + '%';
-    $('top').checked = !!s.alwaysOnTop;
+    pinned = !!s.alwaysOnTop;
+    $('pinBtn').classList.toggle('on', pinned);
+    $('pinBtn').title = pinned ? '常に最前面（オン）' : '常に最前面（オフ）';
     applyBase(s.baseColor);
   }
   $('tr').addEventListener('input', (e) => {
@@ -952,7 +1096,6 @@
     clearTimeout(opTimer);
     opTimer = setTimeout(() => window.api.setOpacity(op), 200);
   });
-  $('top').addEventListener('change', (e) => window.api.setPin(e.target.checked));
   window.api.onSettings(applySettings);
 
   /* ---------- ベース色（パレット） ---------- */
@@ -989,6 +1132,7 @@
     // 最後の1つは自由な色(OSのカラーピッカー)。暗く読みやすい色へ自動で補正する
     const custom = el('label', 'sw custom');
     custom.title = '好きな色を選ぶ（暗めに補正されます）';
+    custom.addEventListener('click', () => { pickingColor = true; });
     const input = el('input');
     input.type = 'color';
     input.value = '#3a5a9a';
@@ -1008,27 +1152,96 @@
   // ポップオーバー(配置・外観)は同時に1つだけ開く
   const POPS = {
     layout: { el: $('pop'), btn: $('layoutBtn') },
-    look: { el: $('popLook'), btn: $('lookBtn') }
+    look: { el: $('popLook'), btn: $('lookBtn') },
+    remind: { el: $('popRemind'), btn: null } // 行のベルから開く(ボタンなし)
   };
   let currentPop = null;
   async function setPop(name) {
     currentPop = name;
+    $('popBack').hidden = !name;
     for (const [k, p] of Object.entries(POPS)) {
       p.el.hidden = k !== name;
-      p.btn.classList.toggle('on', k === name);
+      if (p.btn) p.btn.classList.toggle('on', k === name);
     }
     if (name === 'layout') renderLayout(await window.api.layoutState());
   }
   const closePop = () => setPop(null);
+
+  // 色選択(OSのダイアログ)や日時ピッカーは別ウィンドウ扱いでフォーカスが外れるため、その間は閉じない
+  let pickingColor = false;
   function initPopovers() {
     $('layoutBtn').onclick = () => setPop(currentPop === 'layout' ? null : 'layout');
     $('lookBtn').onclick = () => setPop(currentPop === 'look' ? null : 'look');
-    document.addEventListener('mousedown', (e) => {
-      if (!currentPop) return;
-      const p = POPS[currentPop];
-      if (!p.el.contains(e.target) && !p.btn.contains(e.target)) closePop();
+    // 欄外(全面レイヤー。タイトルバー上も含む)のクリックで閉じる
+    $('popBack').addEventListener('mousedown', closePop);
+    // 他のアプリを操作してフォーカスが外れたときも閉じる
+    window.addEventListener('blur', () => {
+      const a = document.activeElement;
+      if (pickingColor || (a && (a.type === 'datetime-local' || a.type === 'color'))) return;
+      if (currentPop) closePop();
     });
+    window.addEventListener('focus', () => { pickingColor = false; });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && currentPop) closePop(); });
+  }
+
+  /* ---------- リマインド設定 ---------- */
+  let remindId = null;
+  const nowLocal = (offsetMin) => L.formatRemind(Date.now() + offsetMin * 60000);
+
+  function openRemind(t, li) {
+    remindId = t.id;
+    $('remTask').textContent = truncate(t.text.split('\n')[0], 14);
+    const box = $('remChips');
+    box.innerHTML = '';
+    L.remindPresets().forEach((p) => {
+      const b = el('button', null, p.label);
+      b.onclick = () => applyRemind(p.value, p.label);
+      box.append(b);
+    });
+    $('remAt').value = t.remind && L.remindState(t) !== 'ack' ? t.remind : nowLocal(60);
+    $('remOff').hidden = !t.remind;
+    setPop('remind');
+    // 押した行の下に出す(画面からはみ出さないよう補正)
+    const pop = $('popRemind');
+    const panel = document.querySelector('.panel').getBoundingClientRect();
+    const r = li.getBoundingClientRect();
+    const top = Math.min(r.bottom - panel.top + 4, panel.height - pop.offsetHeight - 8);
+    pop.style.top = Math.max(60, top) + 'px';
+  }
+  function applyRemind(value, label) {
+    if (!remindId || !L.setRemind(todos, remindId, value)) return;
+    closePop();
+    save(); render(); checkReminders();
+    toast(value ? `${label || L.remindLabel(value)} にリマインド` : 'リマインドを解除しました');
+  }
+  $('remSet').onclick = () => {
+    if (!$('remAt').value) { toast('日時を選んでください'); return; }
+    applyRemind($('remAt').value);
+  };
+  $('remOff').onclick = () => applyRemind('');
+
+  // 時刻を過ぎたタスクを見つけたら、ウィンドウを前面に出して点滅させる
+  const notified = new Set(); // 起動中に一度知らせたもの(タスクID + 時刻)
+  function flashPanel() {
+    const p = document.querySelector('.panel');
+    p.classList.remove('alert');
+    void p.offsetWidth; // アニメーションを先頭からやり直す
+    p.classList.add('alert');
+    setTimeout(() => p.classList.remove('alert'), 1900);
+  }
+  function checkReminders() {
+    if (document.querySelector('.txt[contenteditable]')) return; // 編集中は再描画しない(次回に回す)
+    const now = Date.now();
+    const fresh = todos.filter((t) => L.remindState(t, now) === 'ringing' && !notified.has(t.id + '|' + t.remind));
+    if (!fresh.length) return;
+    fresh.forEach((t) => {
+      notified.add(t.id + '|' + t.remind);
+      // 閉じた親の中にいると見えないので開く
+      for (let p = L.byId(todos, t.parentId); p; p = L.byId(todos, p.parentId)) p.collapsed = false;
+    });
+    save(); render();
+    flashPanel();
+    window.api.alertFront();
   }
   const pct = (v) => (v * 100).toFixed(2) + '%';
   const rectStyle = (node, b, wa) => {
@@ -1103,6 +1316,8 @@
     initMaterial(data.env || {});
     setInterval(refreshDue, 60 * 1000);
     render();
+    checkReminders();
+    setInterval(checkReminders, 5 * 1000);
   })();
 </script>
 </body>

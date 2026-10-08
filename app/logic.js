@@ -51,6 +51,99 @@
     return true;
   }
 
+  /* ---------- タスク文(複数行可) ---------- */
+  const TEXT_MAX = 1000;
+
+  // 改行をLFに統一し、行末空白・前後の空行を除く。連続する空行は1つにまとめ、上限で切る
+  function cleanText(s, max = TEXT_MAX) {
+    if (typeof s !== 'string') return '';
+    return s
+      .replace(/\r\n?/g, '\n')
+      .split('\n').map((l) => l.replace(/\s+$/, '')).join('\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+      .slice(0, max);
+  }
+
+  /* ---------- リマインド(日時指定。'YYYY-MM-DDTHH:mm' の現地時刻) ---------- */
+  const pad2 = (n) => String(n).padStart(2, '0');
+
+  function parseRemind(v) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(typeof v === 'string' ? v : '');
+    if (!m) return null;
+    const [y, mo, d, h, mi] = m.slice(1).map(Number);
+    const dt = new Date(y, mo - 1, d, h, mi);
+    const ok = dt.getFullYear() === y && dt.getMonth() === mo - 1 && dt.getDate() === d &&
+      dt.getHours() === h && dt.getMinutes() === mi;
+    return ok ? dt : null;
+  }
+
+  function formatRemind(ms) {
+    const d = new Date(ms);
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  }
+
+  function newTask(text, parentId = null) {
+    return {
+      id: uid(), text: cleanText(text), done: false, parentId, after: [], collapsed: false,
+      due: null, remind: null, remindDone: false
+    };
+  }
+
+  // 空文字・null は解除。設定し直すと未確認(鳴る前)に戻る。不正な日時は拒否
+  function setRemind(todos, id, value) {
+    const t = byId(todos, id);
+    if (!t) return false;
+    if (value == null || value === '') { t.remind = null; t.remindDone = false; return true; }
+    if (!parseRemind(value)) return false;
+    t.remind = value;
+    t.remindDone = false;
+    return true;
+  }
+
+  // none: 未設定・完了済み / pending: 時刻前 / ringing: 時刻を過ぎて未確認 / ack: 確認済み
+  function remindState(t, now = Date.now()) {
+    const d = parseRemind(t.remind);
+    if (!d || t.done) return 'none';
+    if (t.remindDone) return 'ack';
+    return d.getTime() <= now ? 'ringing' : 'pending';
+  }
+
+  function ackRemind(todos, id) {
+    const t = byId(todos, id);
+    if (!t) return false;
+    t.remindDone = true;
+    return true;
+  }
+
+  function snoozeRemind(todos, id, minutes, now = Date.now()) {
+    return setRemind(todos, id, formatRemind(now + minutes * 60000));
+  }
+
+  function remindLabel(v, now = Date.now()) {
+    const d = parseRemind(v);
+    if (!d) return null;
+    const n = new Date(now);
+    const days = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) -
+      new Date(n.getFullYear(), n.getMonth(), n.getDate())) / DAY);
+    const hm = `${d.getHours()}:${pad2(d.getMinutes())}`;
+    if (days === 0) return `今日 ${hm}`;
+    if (days === 1) return `明日 ${hm}`;
+    return `${d.getMonth() + 1}/${d.getDate()} ${hm}`;
+  }
+
+  // 素早く選ぶための候補。すでに過ぎた時刻は出さない
+  function remindPresets(now = Date.now()) {
+    const n = new Date(now);
+    const list = [
+      { label: '15分後', ms: now + 15 * 60000 },
+      { label: '1時間後', ms: now + 60 * 60000 },
+      { label: '今日 18:00', ms: new Date(n.getFullYear(), n.getMonth(), n.getDate(), 18, 0).getTime() },
+      { label: '明日 9:00', ms: new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1, 9, 0).getTime() }
+    ];
+    return list.filter((p) => p.ms > now).map((p) => ({ label: p.label, value: formatRemind(p.ms) }));
+  }
+
   function normalize(list) {
     const items = (Array.isArray(list) ? list : []).map((t) => ({
       id: String(t.id),
@@ -59,7 +152,9 @@
       parentId: t.parentId != null ? String(t.parentId) : null,
       after: Array.isArray(t.after) ? t.after.map(String) : [],
       collapsed: !!t.collapsed,
-      due: parseDue(t.due) ? String(t.due) : null
+      due: parseDue(t.due) ? String(t.due) : null,
+      remind: parseRemind(t.remind) ? String(t.remind) : null,
+      remindDone: !!t.remindDone && !!parseRemind(t.remind)
     }));
     const ids = new Set(items.map((t) => t.id));
     items.forEach((t) => {
@@ -198,7 +293,8 @@
   const api = {
     uid, byId, normalize, flatten, isDesc, descendants, depthOf,
     dependsOn, isBlocked, canMove, canLink, moveTask, linkTask, removeTask, toggleDone,
-    DUE_HORIZON_DAYS, parseDue, dueEnd, urgency, dueLabel, setDue
+    TEXT_MAX, cleanText, parseRemind, formatRemind, newTask, setRemind, remindState, ackRemind,
+    snoozeRemind, remindLabel, remindPresets,DUE_HORIZON_DAYS, parseDue, dueEnd, urgency, dueLabel, setDue
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TodoLogic = api;

@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('api', {
   saveTodos: (todos) => ipcRenderer.send('save-todos', todos),
   setOpacity: (v) => ipcRenderer.send('set-opacity', v),
   setPin: (on) => ipcRenderer.send('set-pin', on),
+  alertFront: () => ipcRenderer.send('alert-front'),
   hide: () => ipcRenderer.send('hide'),
   quit: () => ipcRenderer.send('quit'),
   setBaseColor: (v) => ipcRenderer.send('set-base-color', v),

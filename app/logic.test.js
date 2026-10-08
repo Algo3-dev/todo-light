@@ -22,7 +22,8 @@ test('normalize: 非配列は空配列', () => {
 test('normalize: 欠損フィールドを補完し型を揃える', () => {
   const [t] = L.normalize([{ id: 1 }]);
   assert.deepEqual(t, {
-    id: '1', text: '', done: false, parentId: null, after: [], collapsed: false, due: null
+    id: '1', text: '', done: false, parentId: null, after: [], collapsed: false, due: null,
+    remind: null, remindDone: false
   });
 });
 
@@ -231,4 +232,106 @@ test('setDue: 設定・解除ができ、不正値や不明IDは拒否', () => {
   assert.equal(L.setDue(todos, 'a', ''), true);
   assert.equal(L.byId(todos, 'a').due, null);
   assert.equal(L.setDue(todos, 'zzz', '2026-10-08'), false);
+});
+
+test('cleanText: 改行コードをLFに統一し前後の空白・空行を除く', () => {
+  assert.equal(L.cleanText('  a\r\nb\rc  '), 'a\nb\nc');
+  assert.equal(L.cleanText('\n\n a \n\n'), 'a');
+});
+
+test('cleanText: 各行の行末空白を除き、連続する空行は1つにまとめる', () => {
+  assert.equal(L.cleanText('a  \n\n\n\nb'), 'a\n\nb');
+});
+
+test('cleanText: 空・非文字列は空文字、上限を超えたら切り詰める', () => {
+  assert.equal(L.cleanText(null), '');
+  assert.equal(L.cleanText('   '), '');
+  assert.equal(L.cleanText('abcdef', 3), 'abc');
+  assert.equal(L.TEXT_MAX, 1000);
+});
+
+/* ---------- リマインド ---------- */
+const ts = (y, mo, d, h = 0, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime();
+
+test('parseRemind: 正しい日時のみ Date、不正・存在しない日時は null', () => {
+  assert.equal(L.parseRemind('2026-10-08T09:30').getTime(), ts(2026, 10, 8, 9, 30));
+  assert.equal(L.parseRemind('2026-02-30T09:30'), null);
+  assert.equal(L.parseRemind('2026-10-08T25:00'), null);
+  assert.equal(L.parseRemind('2026-10-08'), null);
+  assert.equal(L.parseRemind(null), null);
+});
+
+test('formatRemind: ローカル時刻を YYYY-MM-DDTHH:mm にする(0埋め)', () => {
+  assert.equal(L.formatRemind(ts(2026, 1, 2, 3, 4)), '2026-01-02T03:04');
+});
+
+test('newTask: 全フィールドを持つ。文は cleanText を通す', () => {
+  const t = L.newTask('  hi \r\n', 'p1');
+  assert.match(t.id, /^t/);
+  assert.deepEqual({ ...t, id: 'x' }, {
+    id: 'x', text: 'hi', done: false, parentId: 'p1', after: [], collapsed: false,
+    due: null, remind: null, remindDone: false
+  });
+  assert.equal(L.newTask('a').parentId, null);
+});
+
+test('normalize: remind / remindDone を保持し、不正な remind は捨てる', () => {
+  const [a, b] = L.normalize([
+    { id: 'a', remind: '2026-10-08T09:30', remindDone: 1 },
+    { id: 'b', remind: 'bad', remindDone: true }
+  ]);
+  assert.equal(a.remind, '2026-10-08T09:30');
+  assert.equal(a.remindDone, true);
+  assert.equal(b.remind, null);
+  assert.equal(b.remindDone, false);
+});
+
+test('setRemind: 設定すると未確認に戻る。空は解除、不正は拒否', () => {
+  const todos = [mk('a', { remind: null, remindDone: true })];
+  assert.equal(L.setRemind(todos, 'a', '2026-10-08T09:30'), true);
+  assert.equal(todos[0].remind, '2026-10-08T09:30');
+  assert.equal(todos[0].remindDone, false);
+  assert.equal(L.setRemind(todos, 'a', 'bad'), false);
+  assert.equal(todos[0].remind, '2026-10-08T09:30');
+  assert.equal(L.setRemind(todos, 'a', ''), true);
+  assert.equal(todos[0].remind, null);
+  assert.equal(L.setRemind(todos, 'zzz', ''), false);
+});
+
+test('remindState: none / pending / ringing / ack、完了済みは none', () => {
+  const now = ts(2026, 10, 8, 10, 0);
+  const t = (extra) => mk('a', { remind: null, remindDone: false, ...extra });
+  assert.equal(L.remindState(t(), now), 'none');
+  assert.equal(L.remindState(t({ remind: '2026-10-08T10:30' }), now), 'pending');
+  assert.equal(L.remindState(t({ remind: '2026-10-08T10:00' }), now), 'ringing');
+  assert.equal(L.remindState(t({ remind: '2026-10-08T09:00' }), now), 'ringing');
+  assert.equal(L.remindState(t({ remind: '2026-10-08T09:00', remindDone: true }), now), 'ack');
+  assert.equal(L.remindState(t({ remind: '2026-10-08T09:00', done: true }), now), 'none');
+});
+
+test('ackRemind / snoozeRemind: 確認で止まり、スヌーズで N 分後に再設定', () => {
+  const now = ts(2026, 10, 8, 23, 50);
+  const todos = [mk('a', { remind: '2026-10-08T23:00', remindDone: false })];
+  L.ackRemind(todos, 'a');
+  assert.equal(todos[0].remindDone, true);
+  assert.equal(L.snoozeRemind(todos, 'a', 20, now), true);
+  assert.equal(todos[0].remind, '2026-10-09T00:10');
+  assert.equal(todos[0].remindDone, false);
+  assert.equal(L.snoozeRemind(todos, 'zzz', 5, now), false);
+});
+
+test('remindLabel: 今日 / 明日 / それ以外は M/D', () => {
+  const now = ts(2026, 10, 8, 10, 0);
+  assert.equal(L.remindLabel('2026-10-08T15:05', now), '今日 15:05');
+  assert.equal(L.remindLabel('2026-10-09T09:00', now), '明日 9:00');
+  assert.equal(L.remindLabel('2026-10-20T09:00', now), '10/20 9:00');
+  assert.equal(L.remindLabel('2026-10-07T09:00', now), '10/7 9:00');
+  assert.equal(L.remindLabel('bad', now), null);
+});
+
+test('remindPresets: 過ぎた時刻の候補は出さない', () => {
+  const am = L.remindPresets(ts(2026, 10, 8, 10, 0)).map((p) => p.value);
+  assert.deepEqual(am, ['2026-10-08T10:15', '2026-10-08T11:00', '2026-10-08T18:00', '2026-10-09T09:00']);
+  const pm = L.remindPresets(ts(2026, 10, 8, 19, 0)).map((p) => p.value);
+  assert.deepEqual(pm, ['2026-10-08T19:15', '2026-10-08T20:00', '2026-10-09T09:00']);
 });
