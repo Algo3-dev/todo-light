@@ -19,6 +19,7 @@ copy /y "%ROOT%\TodoGadget.vbs" "%OUT%" >nul
 copy /y "%ROOT%\AddToStartup.bat" "%OUT%" >nul
 copy /y "%ROOT%\RemoveFromStartup.bat" "%OUT%" >nul
 copy /y "%ROOT%\README.md" "%OUT%" >nul
+copy /y "%ROOT%\LICENSE" "%OUT%" >nul
 copy /y "%ROOT%\VERSION" "%OUT%" >nul
 
 rem Zip the folder itself so extracting creates a TodoGadget folder

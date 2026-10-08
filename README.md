@@ -2,6 +2,10 @@
 
 Windows 11 のデスクトップに常駐する、半透明ガラス風の Todo ガジェット。親子タスク・先行関係(完了順の制約)・期限をマウスだけで設定できる。
 
+## ダウンロード
+
+[Releases](../../releases) から最新の `TodoGadget-<バージョン>.zip` を取得する。リポジトリを clone した場合は `scripts\dist.bat` で同じ ZIP を作れる。
+
 ## 動作要件
 
 - Windows 11(アクリル/マイカ背景は 22H2 以降。それ以前は透過ガラスで動作)
@@ -12,6 +16,7 @@ Windows 11 のデスクトップに常駐する、半透明ガラス風の Todo 
 1. ZIPを好きな場所に展開(例: `C:\Tools\TodoGadget`)
 2. `TodoGadget.bat` をダブルクリック
    - 初回のみ Electron を `%LOCALAPPDATA%\TodoGadget\runtime` にダウンロードする。ZIPを展開し直しても再ダウンロードされない
+   - ダウンロードした Electron は、`TodoGadget.bat` に埋め込んだ SHA-256 と照合してから展開する。一致しない場合は実行せず中止する(ハッシュは Electron 公式の `SHASUMS256.txt` と同じ値)
    - 以降は `%LOCALAPPDATA%\TodoGadget\runtime\TodoGadget.exe` を直接起動してもよい
 3. SmartScreen が出たら「詳細情報」→「実行」(自作・未署名のため)
 
@@ -83,5 +88,13 @@ Windows 11 のデスクトップに常駐する、半透明ガラス風の Todo 
 - フッターの「透過度」スライダー(0〜85%)で背景の透け具合を調整
 - フッターの「最前面」スイッチで常に最前面を ON/OFF(トレイメニューとも連動)
 - 設定とタスクは自動保存(`%APPDATA%\todo-gadget\todo-data.json`)
+
+## プライバシー
+
+通信は初回の Electron ダウンロードのみ。タスクや設定は外部へ送信せず、ローカルの `todo-data.json` にだけ保存する。
+
+## ライセンス
+
+[MIT License](LICENSE)
 
 開発者向け情報は [docs/README_DEV.md](docs/README_DEV.md)、開発ルールは [AGENTS.md](AGENTS.md) を参照。
