@@ -28,8 +28,9 @@ main.js (main: ウィンドウ・トレイ・グローバルショートカッ�
 
 ## 技術スタック(具体バージョン)
 
-- Electron 33.4.11(`TodoGadget.bat` の `VER` が正本。`%LOCALAPPDATA%\TodoGadget\runtime` に展開)
-  - **Electron を更新するときは `VER` と `SHA256` を必ずセットで変える。** 値は `https://github.com/electron/electron/releases/download/v<VER>/SHASUMS256.txt` の `electron-v<VER>-win32-x64.zip` の行。実ファイルの `sha256sum` とも突き合わせること
+- Electron 44.7.0(`TodoGadget.bat` の `VER` が正本。`%LOCALAPPDATA%\TodoGadget\runtime` に展開)
+  - インストール済みの Electron のバージョンは `runtime\electron.version` に記録する。`VER` と異なる(または記録が無い)と、次回起動時に取得し直す。旧版が起動中なら、ダウンロードせず終了を案内して中止する
+  - **Electron を更新するときは `VER` と `SHA256` を必ずセットで変える。** 値は `https://github.com/electron/electron/releases/download/v<VER>/SHASUMS256.txt` の `electron-v<VER>-win32-x64.zip` の行。実ファイルの `sha256sum` とも突き合わせること(GitHub API の asset の `digest` も独立した照合に使える)。更新後は、隔離環境(`--user-data-dir` を別フォルダに指定。**本物の保存先 `%APPDATA%\Todo Gadget` を使わないこと**)で、画面描画・サイズ変更・背景素材・ショートカット登録・トレイの互換性を確認する
   - `TodoGadget.bat` の PowerShell は、モジュール由来のコマンド(`Get-FileHash` 等)に頼らず .NET を直接使う。PowerShell 7 から起動された環境では `PSModulePath` が引き継がれ、Windows PowerShell 5.1 が非互換のモジュールを拾って `Get-FileHash` が使えなくなる実例があった(検証が常に失敗して初回起動できなくなる)。bat のダウンロード行を変えたら、行を取り出して正しい/誤ったハッシュの両方で実行し、終了コード 0 / 2 を確認すること
   - `.bat` / `.vbs` は `.gitattributes` で CRLF に固定している(LF だけの bat は `goto` / ラベルが誤動作することがある)。編集後に改行が LF になっていないか注意
 - 素の JavaScript(ビルド工程・バンドラなし)

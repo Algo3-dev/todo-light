@@ -11,13 +11,14 @@ Windows 11 のデスクトップに常駐する、半透明ガラス風の Todo 
 ## 動作要件
 
 - Windows 11(アクリル/マイカ背景は 22H2 以降。それ以前は透過ガラスで動作)
-- Node.js は不要(初回のみ Electron 約115MBを自動ダウンロードするためネット接続が必要)
+- Node.js は不要(初回と Electron の更新時のみ、Electron 約160MBを自動ダウンロードするためネット接続が必要)
 
 ## セットアップ
 
 1. ZIPを好きな場所に展開(例: `C:\Tools\TodoGadget`)
 2. `TodoGadget.bat` をダブルクリック
    - 初回のみ Electron を `%LOCALAPPDATA%\TodoGadget\runtime` にダウンロードする。ZIPを展開し直しても再ダウンロードされない
+   - 新しいバージョンで Electron が更新されている場合は、アプリを終了してから `TodoGadget.bat` を実行し直すと取得し直す(起動中の場合は、その旨を表示して中止する)
    - ダウンロードした Electron は、`TodoGadget.bat` に埋め込んだ SHA-256 と照合してから展開する。一致しない場合は実行せず中止する(ハッシュは Electron 公式の `SHASUMS256.txt` と同じ値)
    - 以降は `%LOCALAPPDATA%\TodoGadget\runtime\TodoGadget.exe` を直接起動してもよい
 3. SmartScreen が出たら「詳細情報」→「実行」(自作・未署名のため)
