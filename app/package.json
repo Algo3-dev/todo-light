@@ -2,5 +2,7 @@
   "name": "todo-gadget",
   "productName": "Todo Gadget",
   "version": "1.0.0",
+  "description": "Semi-transparent desktop TODO gadget for Windows 11 (subtasks, dependencies, due dates)",
+  "license": "MIT",
   "main": "main.js"
 }

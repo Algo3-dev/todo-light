@@ -94,6 +94,9 @@ function createWindow() {
   });
 
   win.loadFile('index.html');
+  // ローカルの index.html 以外は開かない・遷移させない
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  win.webContents.on('will-navigate', (e) => e.preventDefault());
 
   const persistBounds = () => {
     if (!win || win.isDestroyed()) return;
@@ -326,8 +329,17 @@ if (!gotLock) {
     ipcMain.on('toggle-collapse', toggleCollapse);
     ipcMain.on('snap', (_e, corner) => snapTo(corner));
     ipcMain.on('size-preset', (_e, key) => setSizePreset(key));
-    ipcMain.on('save-todos', (_e, todos) => { data.todos = todos; scheduleSave(); });
-    ipcMain.on('set-opacity', (_e, v) => { data.settings.opacity = v; scheduleSave(); });
+    // レンダラーからの入力は型・範囲を検証してから採用する
+    ipcMain.on('save-todos', (_e, todos) => {
+      if (!Array.isArray(todos)) return;
+      data.todos = todos;
+      scheduleSave();
+    });
+    ipcMain.on('set-opacity', (_e, v) => {
+      if (typeof v !== 'number' || !Number.isFinite(v)) return;
+      data.settings.opacity = Math.min(1, Math.max(0.15, v)); // UIの範囲(透過度0〜85%)と同じ
+      scheduleSave();
+    });
     ipcMain.on('set-pin', (_e, on) => setPin(on));
     ipcMain.on('hide', () => win.hide());
     ipcMain.on('quit', () => app.quit());
