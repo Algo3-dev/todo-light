@@ -174,17 +174,43 @@ function setSizePreset(key) {
   sendLayout();
 }
 
+// 実際に割り当たったキー（id → アクセラレータ。競合で全滅なら null）。画面・トレイの表示にも使う
+let shortcutMap = {};
+
 function registerShortcuts() {
-  const { modifier, corners, sizes, toggle, collapse } = Lay.SHORTCUTS;
-  const bind = (key, fn) => {
-    if (!globalShortcut.register(`${modifier}+${key}`, fn)) {
-      console.warn(`shortcut ${modifier}+${key} is already in use`);
-    }
+  const handlers = { toggle: toggleWindow, collapse: toggleCollapse };
+  Lay.CORNERS.forEach((c) => { handlers[c] = () => snapTo(c); });
+  Object.keys(Lay.SIZES).forEach((k) => { handlers[k] = () => setSizePreset(k); });
+
+  const tryRegister = (acc, fn) => {
+    try { return globalShortcut.register(acc, fn); } catch { return false; }
   };
-  Lay.CORNERS.forEach((c) => bind(corners[c], () => snapTo(c)));
-  Object.keys(Lay.SIZES).forEach((k) => bind(sizes[k], () => setSizePreset(k)));
-  bind(toggle, toggleWindow);
-  bind(collapse, toggleCollapse);
+  // 他アプリと競合したキーは Shift 付き等の代替へ自動で切り替える
+  shortcutMap = Lay.resolveShortcuts((id, acc) => tryRegister(acc, handlers[id]));
+
+  // 数字キーのサイズ指定は、テンキーからも使えるようにする
+  Object.keys(Lay.SIZES).forEach((k) => {
+    const alias = `${Lay.SHORTCUTS.modifier}+num${Lay.SHORTCUTS.sizes[k]}`;
+    if (shortcutMap[k] !== alias) tryRegister(alias, handlers[k]);
+  });
+
+  // 競合の調査用に結果を残す
+  try {
+    fs.writeFileSync(path.join(app.getPath('userData'), 'shortcuts.log'),
+      JSON.stringify({ at: new Date().toISOString(), shortcuts: shortcutMap }, null, 2), 'utf8');
+  } catch { /* ログ失敗は無視 */ }
+}
+
+// 背景素材の変更は再起動が必要。旧プロセスがキーを握ったまま新プロセスが起動すると
+// ショートカットが全滅するので、再起動の前に必ず解除する
+function setMaterial(id) {
+  if (!isWin11 || !MATERIALS.includes(id) || data.settings.material === id) return;
+  data.settings.material = id;
+  saveData(data);
+  globalShortcut.unregisterAll();
+  app.releaseSingleInstanceLock();
+  app.relaunch();
+  app.exit(0);
 }
 
 // 最前面の変更はここに集約(トレイ・フッターのスイッチ共通)
@@ -218,13 +244,13 @@ function buildTray() {
   tray = new Tray(icon);
   tray.setToolTip('Todo Gadget');
   const menu = Menu.buildFromTemplate([
-    { label: '表示 / 非表示', accelerator: `${Lay.SHORTCUTS.modifier}+${Lay.SHORTCUTS.toggle}`, registerAccelerator: false, click: toggleWindow },
-    { label: 'タイトルバーだけにする / 戻す', accelerator: `${Lay.SHORTCUTS.modifier}+${Lay.SHORTCUTS.collapse}`, registerAccelerator: false, click: toggleCollapse },
+    { label: '表示 / 非表示', accelerator: shortcutMap.toggle || undefined, registerAccelerator: false, click: toggleWindow },
+    { label: 'タイトルバーだけにする / 戻す', accelerator: shortcutMap.collapse || undefined, registerAccelerator: false, click: toggleCollapse },
     {
       label: '位置',
       submenu: [['tl', '左上'], ['tr', '右上'], ['bl', '左下'], ['br', '右下']].map(([c, label]) => ({
         label,
-        accelerator: `${Lay.SHORTCUTS.modifier}+${Lay.SHORTCUTS.corners[c]}`,
+        accelerator: shortcutMap[c] || undefined,
         registerAccelerator: false,
         click: () => snapTo(c)
       }))
@@ -233,7 +259,7 @@ function buildTray() {
       label: 'サイズ',
       submenu: [['s', '小'], ['m', '中'], ['l', '大']].map(([k, label]) => ({
         label,
-        accelerator: `${Lay.SHORTCUTS.modifier}+${Lay.SHORTCUTS.sizes[k]}`,
+        accelerator: shortcutMap[k] || undefined,
         registerAccelerator: false,
         click: () => setSizePreset(k)
       }))
@@ -248,14 +274,7 @@ function buildTray() {
         label,
         type: 'radio',
         checked: data.settings.material === id,
-        click: () => {
-          if (data.settings.material === id) return;
-          data.settings.material = id;
-          saveData(data);
-          app.releaseSingleInstanceLock();
-          app.relaunch();
-          app.exit(0);
-        }
+        click: () => setMaterial(id)
       }))
     }] : []),
     {
@@ -288,10 +307,14 @@ if (!gotLock) {
     if (!MATERIALS.includes(data.settings.material)) data.settings.material = 'acrylic';
     nativeBlur = isWin11 && data.settings.material !== 'transparent';
     createWindow();
-    buildTray();
     registerShortcuts();
+    buildTray(); // トレイのメニューに実際のキーを表示するため、登録の後
 
-    ipcMain.handle('load', () => ({ ...data, env: { nativeBlur } }));
+    ipcMain.handle('load', () => ({
+      ...data,
+      env: { nativeBlur, win11: isWin11, material: data.settings.material, shortcuts: shortcutMap }
+    }));
+    ipcMain.on('set-material', (_e, id) => setMaterial(id));
     ipcMain.handle('layout-state', () => layoutState());
     ipcMain.on('toggle-collapse', toggleCollapse);
     ipcMain.on('snap', (_e, corner) => snapTo(corner));

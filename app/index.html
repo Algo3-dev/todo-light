@@ -371,12 +371,28 @@
   .switch input:checked + .track::after { transform: translateX(16px); }
 
   .toast {
-    position: absolute; left: 50%; bottom: 78px; transform: translate(-50%, 8px);
+    position: absolute; left: 50%; bottom: 108px; transform: translate(-50%, 8px);
     padding: 7px 14px; border-radius: 10px; font-size: 12px; color: var(--text);
     background: rgba(10,14,28,0.92); border: 1px solid rgba(255,211,110,0.45);
     opacity: 0; pointer-events: none; transition: all .2s; white-space: nowrap;
   }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ---------- 背景の切替(Windows 11) ---------- */
+  .frow[hidden] { display: none; }
+  .matseg { display: flex; gap: 4px; }
+  .matseg button {
+    border: none; cursor: pointer; padding: 4px 9px; border-radius: 8px;
+    background: rgba(255,255,255,0.07); color: var(--text); font-size: 11px;
+    transition: background .12s;
+  }
+  .matseg button:hover { background: rgba(255,255,255,0.16); }
+  .matseg button.on { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #0a0e1a; font-weight: 700; }
+
+  /* ショートカットの競合表示 */
+  .qk.ng, .seg kbd.ng { opacity: .45; text-decoration: line-through; }
+  .pop-warn { margin-top: 8px; font-size: 10px; line-height: 1.45; color: var(--pred); }
+  .pop-warn[hidden] { display: none; }
 
   /* ---------- 行アイコン(SVG) ---------- */
   .grip svg, .fold svg { display: block; margin: auto; }
@@ -475,6 +491,7 @@
         <button data-s="m">中<kbd></kbd></button>
         <button data-s="l">大<kbd></kbd></button>
       </div>
+      <div class="pop-warn" id="popWarn" hidden>他のアプリと競合して使えないキーがあります（「–」のキー）。</div>
     </div>
 
     <div class="progress"><i id="bar"></i></div>
@@ -502,6 +519,14 @@
           <input type="checkbox" id="top">
           <i class="track"></i>
         </label>
+      </div>
+      <div class="frow" id="matRow" hidden title="切り替えるとアプリが再起動します">
+        <span class="count">背景</span>
+        <div class="matseg">
+          <button data-m="transparent">ガラス</button>
+          <button data-m="acrylic">アクリル</button>
+          <button data-m="mica">マイカ</button>
+        </div>
       </div>
     </footer>
   </div>
@@ -902,11 +927,16 @@
     document.querySelectorAll('#seg button').forEach((b) => b.classList.toggle('on', b.dataset.s === s.size));
   }
 
-  function initLayoutUi() {
-    const S = G.SHORTCUTS;
-    document.querySelectorAll('.qk').forEach((k) => { k.textContent = S.corners[k.dataset.k]; });
+  // sc: メインプロセスが実際に割り当てたキー(競合時は代替キー・未割当は null)
+  function initLayoutUi(sc) {
+    const mark = (node, id) => {
+      node.textContent = G.shortcutLabel(sc[id]);
+      node.classList.toggle('ng', !sc[id]);
+    };
+    $('popWarn').hidden = G.SHORTCUT_IDS.every((id) => sc[id]);
+    document.querySelectorAll('.qk').forEach((k) => mark(k, k.dataset.k));
     document.querySelectorAll('#seg button').forEach((b) => {
-      b.querySelector('kbd').textContent = S.sizes[b.dataset.s];
+      mark(b.querySelector('kbd'), b.dataset.s);
       b.onclick = () => { window.api.sizePreset(b.dataset.s); closePop(); };
     });
     document.querySelectorAll('.q').forEach((q) => {
@@ -936,6 +966,16 @@
     window.api.onLayout(renderLayout);
   }
 
+  // 背景素材の切替(Windows 11のみ)。変更するとアプリが再起動する
+  function initMaterial(env) {
+    if (!env.win11) return;
+    $('matRow').hidden = false;
+    document.querySelectorAll('#matRow button').forEach((b) => {
+      b.classList.toggle('on', b.dataset.m === env.material);
+      b.onclick = () => { if (b.dataset.m !== env.material) window.api.setMaterial(b.dataset.m); };
+    });
+  }
+
   // タイトルバーだけ表示(アプリは常駐のまま)。状態の正本はメインプロセス
   function applyCollapsed(on) {
     document.documentElement.classList.toggle('collapsed', !!on);
@@ -950,7 +990,8 @@
     todos = L.normalize(data.todos);
     document.documentElement.classList.toggle('native', !!(data.env && data.env.nativeBlur));
     applySettings(data.settings);
-    initLayoutUi();
+    initLayoutUi((data.env && data.env.shortcuts) || {});
+    initMaterial(data.env || {});
     setInterval(refreshDue, 60 * 1000);
     render();
   })();

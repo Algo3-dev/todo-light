@@ -89,10 +89,41 @@
 
   const resizeAnchored = (b, wa, sizeKey) => resizeAnchoredTo(b, wa, SIZES[sizeKey]);
 
+  /* ---------- ショートカットの割り当て（他アプリと競合したら代替キーへ） ---------- */
+  const SHORTCUT_IDS = [...CORNERS, ...Object.keys(SIZES), 'toggle', 'collapse'];
+
+  const shortcutKeys = () => ({
+    ...SHORTCUTS.corners, ...SHORTCUTS.sizes,
+    toggle: SHORTCUTS.toggle, collapse: SHORTCUTS.collapse
+  });
+
+  // 通常キー → Shift 付き →（数字なら）テンキー の順に試す
+  function shortcutCandidates(key) {
+    const m = SHORTCUTS.modifier;
+    return [`${m}+${key}`, `${m}+Shift+${key}`, ...(/^\d$/.test(key) ? [`${m}+num${key}`] : [])];
+  }
+
+  // tryRegister(id, accelerator) が true を返した最初の候補を採用。全滅なら null
+  function resolveShortcuts(tryRegister) {
+    const keys = shortcutKeys();
+    const out = {};
+    SHORTCUT_IDS.forEach((id) => {
+      out[id] = shortcutCandidates(keys[id]).find((acc) => tryRegister(id, acc)) || null;
+    });
+    return out;
+  }
+
+  // 画面表示用。標準の修飾キー(Ctrl+Alt)は省く
+  function shortcutLabel(acc) {
+    if (!acc) return '–';
+    return acc.replace(SHORTCUTS.modifier + '+', '').replace(/^num(\d)$/, 'Num$1');
+  }
+
   const api = {
     MARGIN, MIN, SIZES, CORNERS, SHORTCUTS,
     fitSize, cornerBounds, detectCorner, detectSize, nearestCorner, fitInside,
-    collapsedHeight, resizeAnchoredTo, resizeAnchored
+    collapsedHeight, resizeAnchoredTo, resizeAnchored,
+    SHORTCUT_IDS, shortcutCandidates, resolveShortcuts, shortcutLabel
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.GadgetLayout = api;

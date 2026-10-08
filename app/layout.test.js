@@ -154,3 +154,42 @@ test('resizeAnchoredTo: 任意サイズへ最寄りの角を固定して変更',
   const back = Lay.resizeAnchoredTo(r, WA, { width: br.width, height: 560 });
   assert.deepEqual(back, br); // 元に戻る
 });
+
+/* ---------- ショートカットの競合対策 ---------- */
+test('shortcutCandidates: 通常キー → Shift付き の順。数字はテンキーも候補', () => {
+  assert.deepEqual(Lay.shortcutCandidates('Q'), ['Control+Alt+Q', 'Control+Alt+Shift+Q']);
+  assert.deepEqual(Lay.shortcutCandidates('1'), [
+    'Control+Alt+1', 'Control+Alt+Shift+1', 'Control+Alt+num1'
+  ]);
+});
+
+test('resolveShortcuts: 全アクションを割り当て、競合したキーだけ代替に落とす', () => {
+  const taken = new Set(['Control+Alt+1', 'Control+Alt+Q']);
+  const got = Lay.resolveShortcuts((id, acc) => !taken.has(acc));
+  assert.equal(got.s, 'Control+Alt+Shift+1');
+  assert.equal(got.tl, 'Control+Alt+Shift+Q');
+  assert.equal(got.m, 'Control+Alt+2');
+  assert.equal(got.toggle, 'Control+Alt+Space');
+  assert.equal(got.collapse, 'Control+Alt+M');
+  assert.deepEqual(Object.keys(got).sort(), [...Lay.SHORTCUT_IDS].sort());
+});
+
+test('resolveShortcuts: 全候補が使えなければ null', () => {
+  const got = Lay.resolveShortcuts((id, acc) => id !== 'l');
+  assert.equal(got.l, null);
+  assert.ok(got.s);
+});
+
+test('resolveShortcuts: 登録関数には id と候補が渡される', () => {
+  const seen = [];
+  Lay.resolveShortcuts((id, acc) => { seen.push(id + ':' + acc); return true; });
+  assert.ok(seen.includes('br:Control+Alt+C'));
+  assert.ok(seen.includes('collapse:Control+Alt+M'));
+});
+
+test('shortcutLabel: 標準の修飾キーを省いて表示し、未割当は –', () => {
+  assert.equal(Lay.shortcutLabel('Control+Alt+Q'), 'Q');
+  assert.equal(Lay.shortcutLabel('Control+Alt+Shift+1'), 'Shift+1');
+  assert.equal(Lay.shortcutLabel('Control+Alt+num2'), 'Num2');
+  assert.equal(Lay.shortcutLabel(null), '–');
+});
