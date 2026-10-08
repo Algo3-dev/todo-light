@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
-<title>TODO Light</title>
+<title>TODO LIGHT</title>
 <style>
   :root {
     --op: 0.82;
@@ -58,24 +58,24 @@
     -webkit-app-region: drag;
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 16px 16px 8px;
+    gap: 4px;
+    padding: 16px 14px 8px 16px;
   }
   .title { flex: 1; }
   .title h1 {
+    white-space: nowrap;
     font-size: 15px;
     font-weight: 700;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.08em;
     background: linear-gradient(90deg, var(--accent), var(--accent2));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
   }
-  .title h1 span { font-weight: 300; letter-spacing: 0.06em; }
   .title .sub { display: none; font-size: 11px; color: var(--muted); margin-top: 2px; }
   .hbtn {
     -webkit-app-region: no-drag;
-    width: 24px; height: 26px;
+    width: 23px; height: 26px;
     border: none; border-radius: 8px;
     background: rgba(255,255,255,0.06);
     color: var(--muted);
@@ -456,7 +456,7 @@
   <div class="panel">
     <header>
       <div class="title">
-        <h1>TODO <span>Light</span></h1>
+        <h1>TODO LIGHT</h1>
         <div class="sub" id="sub"></div>
       </div>
       <button class="hbtn" id="lookBtn" title="外観（透過度・背景・最前面）">

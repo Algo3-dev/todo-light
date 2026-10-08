@@ -242,7 +242,7 @@ function buildTray() {
   }
   const icon = nativeImage.createFromBuffer(buf, { width: size, height: size });
   tray = new Tray(icon);
-  tray.setToolTip('TODO Light');
+  tray.setToolTip('TODO LIGHT');
   const menu = Menu.buildFromTemplate([
     { label: '表示 / 非表示', accelerator: shortcutMap.toggle || undefined, registerAccelerator: false, click: toggleWindow },
     { label: 'タイトルバーだけにする / 戻す', accelerator: shortcutMap.collapse || undefined, registerAccelerator: false, click: toggleCollapse },

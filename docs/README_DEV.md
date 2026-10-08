@@ -20,7 +20,7 @@ main.js (main: ウィンドウ・トレイ・グローバルショートカッ�
 
 ## 名称の扱い
 
-- 製品名(画面上の表記)は **TODO Light**。ウィンドウタイトル・ヘッダー・トレイのツールチップ・README が対象
+- 製品名(画面上の表記)は **TODO LIGHT**(大文字)。ウィンドウタイトル・ヘッダー・トレイのツールチップ・README が対象
 - 次の識別子は互換性のため旧名のまま変えない
   - `app/package.json` の `productName`(`Todo Gadget`): Electron が保存先 `%APPDATA%\Todo Gadget\` とログイン項目名を決めるため。変えると既存のタスク・設定が読めなくなる
   - `TodoGadget.bat` / `.vbs` / `TodoGadget.exe`、`%LOCALAPPDATA%\TodoGadget\runtime`、配布ZIP名 `TodoGadget-<VER>.zip`、スタートアップの `TodoGadget.lnk`
