@@ -58,6 +58,8 @@ function flushSave() {
 
 let data;
 let win = null;
+let collapsed = false; // タイトルバーだけ表示中
+let expandedHeight = 0;
 let tray = null;
 
 function createWindow() {
@@ -79,6 +81,7 @@ function createWindow() {
     minHeight: Lay.MIN.height,
     frame: false,
     resizable: true,
+    maximizable: false, // ヘッダーのダブルクリックで最大化されるのを防ぐ
     skipTaskbar: true,
     alwaysOnTop: !!data.settings.alwaysOnTop,
     ...glass,
@@ -93,7 +96,9 @@ function createWindow() {
 
   const persistBounds = () => {
     if (!win || win.isDestroyed()) return;
-    data.settings.bounds = win.getBounds();
+    const b = win.getBounds();
+    if (collapsed) b.height = expandedHeight; // 折りたたみ中の高さは保存しない
+    data.settings.bounds = b;
     scheduleSave();
   };
   let t;
@@ -130,6 +135,30 @@ function reveal() {
   if (!win.isVisible()) win.show();
 }
 
+// タイトルバーだけにする / 元に戻す（最寄りの角を固定。アプリは終了せず常駐のまま）
+function setCollapsed(on) {
+  if (!win || on === collapsed) return;
+  reveal();
+  const b = win.getBounds();
+  const wa = currentArea();
+  const h = Lay.collapsedHeight(nativeBlur);
+  if (on) {
+    expandedHeight = b.height;
+    collapsed = true;
+    win.setMinimumSize(Lay.MIN.width, h);
+    win.setResizable(false);
+    win.setBounds(Lay.resizeAnchoredTo(b, wa, { width: b.width, height: h }));
+  } else {
+    collapsed = false;
+    win.setResizable(true);
+    win.setMinimumSize(Lay.MIN.width, Lay.MIN.height);
+    win.setBounds(Lay.resizeAnchoredTo(b, wa, { width: b.width, height: expandedHeight }));
+  }
+  win.webContents.send('collapsed-changed', collapsed);
+  sendLayout();
+}
+const toggleCollapse = () => setCollapsed(!collapsed);
+
 function snapTo(corner) {
   if (!win || !Lay.CORNERS.includes(corner)) return;
   reveal();
@@ -139,13 +168,14 @@ function snapTo(corner) {
 
 function setSizePreset(key) {
   if (!win || !Lay.SIZES[key]) return;
+  setCollapsed(false);
   reveal();
   win.setBounds(Lay.resizeAnchored(win.getBounds(), currentArea(), key));
   sendLayout();
 }
 
 function registerShortcuts() {
-  const { modifier, corners, sizes, toggle } = Lay.SHORTCUTS;
+  const { modifier, corners, sizes, toggle, collapse } = Lay.SHORTCUTS;
   const bind = (key, fn) => {
     if (!globalShortcut.register(`${modifier}+${key}`, fn)) {
       console.warn(`shortcut ${modifier}+${key} is already in use`);
@@ -154,6 +184,7 @@ function registerShortcuts() {
   Lay.CORNERS.forEach((c) => bind(corners[c], () => snapTo(c)));
   Object.keys(Lay.SIZES).forEach((k) => bind(sizes[k], () => setSizePreset(k)));
   bind(toggle, toggleWindow);
+  bind(collapse, toggleCollapse);
 }
 
 // 最前面の変更はここに集約(トレイ・フッターのスイッチ共通)
@@ -188,6 +219,7 @@ function buildTray() {
   tray.setToolTip('Todo Gadget');
   const menu = Menu.buildFromTemplate([
     { label: '表示 / 非表示', accelerator: `${Lay.SHORTCUTS.modifier}+${Lay.SHORTCUTS.toggle}`, registerAccelerator: false, click: toggleWindow },
+    { label: 'タイトルバーだけにする / 戻す', accelerator: `${Lay.SHORTCUTS.modifier}+${Lay.SHORTCUTS.collapse}`, registerAccelerator: false, click: toggleCollapse },
     {
       label: '位置',
       submenu: [['tl', '左上'], ['tr', '右上'], ['bl', '左下'], ['br', '右下']].map(([c, label]) => ({
@@ -261,6 +293,7 @@ if (!gotLock) {
 
     ipcMain.handle('load', () => ({ ...data, env: { nativeBlur } }));
     ipcMain.handle('layout-state', () => layoutState());
+    ipcMain.on('toggle-collapse', toggleCollapse);
     ipcMain.on('snap', (_e, corner) => snapTo(corner));
     ipcMain.on('size-preset', (_e, key) => setSizePreset(key));
     ipcMain.on('save-todos', (_e, todos) => { data.todos = todos; scheduleSave(); });

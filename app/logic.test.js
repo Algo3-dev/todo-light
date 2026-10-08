@@ -22,7 +22,7 @@ test('normalize: 非配列は空配列', () => {
 test('normalize: 欠損フィールドを補完し型を揃える', () => {
   const [t] = L.normalize([{ id: 1 }]);
   assert.deepEqual(t, {
-    id: '1', text: '', done: false, parentId: null, after: [], collapsed: false
+    id: '1', text: '', done: false, parentId: null, after: [], collapsed: false, due: null
   });
 });
 
@@ -178,4 +178,57 @@ test('toggleDone: 親を完了にすると子孫も完了', () => {
 
 test('toggleDone: 不明IDは ok:false', () => {
   assert.deepEqual(L.toggleDone([], 'x'), { ok: false });
+});
+
+/* ---------- 期限 ---------- */
+const at = (y, mo, d, h = 12, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime();
+
+test('normalize: due は YYYY-MM-DD のみ受け付け、不正値は null', () => {
+  const r = L.normalize([
+    mk('a', { due: '2026-10-08' }), mk('b', { due: '2026-02-30' }),
+    mk('c', { due: 'tomorrow' }), mk('d', { due: 20261008 }), mk('e')
+  ]);
+  assert.deepEqual(r.map((t) => t.due), ['2026-10-08', null, null, null, null]);
+});
+
+test('dueEnd: 期限日の終わり(23:59:59.999)。不正値は NaN', () => {
+  assert.equal(L.dueEnd('2026-10-08'), new Date(2026, 9, 8, 23, 59, 59, 999).getTime());
+  assert.ok(Number.isNaN(L.dueEnd(null)));
+  assert.ok(Number.isNaN(L.dueEnd('2026-13-01')));
+});
+
+test('urgency: 7日より先は0、近づくほど増え、期限切れは1', () => {
+  assert.equal(L.urgency('2026-10-20', at(2026, 10, 8)), 0);
+  assert.equal(L.urgency('2026-10-15', at(2026, 10, 8)), 0); // ちょうど7日以上先
+  const d4 = L.urgency('2026-10-12', at(2026, 10, 8));
+  const d1 = L.urgency('2026-10-09', at(2026, 10, 8));
+  const d0 = L.urgency('2026-10-08', at(2026, 10, 8));
+  assert.ok(d4 > 0 && d4 < d1 && d1 < d0 && d0 < 1);
+  assert.equal(L.urgency('2026-10-07', at(2026, 10, 8)), 1);
+});
+
+test('urgency: 期限なし・不正値は0', () => {
+  assert.equal(L.urgency(null, at(2026, 10, 8)), 0);
+  assert.equal(L.urgency('xxx', at(2026, 10, 8)), 0);
+});
+
+test('dueLabel: 今日・明日・N日後・日付・N日超過', () => {
+  const now = at(2026, 10, 8, 15);
+  assert.deepEqual(L.dueLabel('2026-10-08', now), { text: '今日', overdue: false });
+  assert.deepEqual(L.dueLabel('2026-10-09', now), { text: '明日', overdue: false });
+  assert.deepEqual(L.dueLabel('2026-10-12', now), { text: '4日後', overdue: false });
+  assert.deepEqual(L.dueLabel('2026-10-20', now), { text: '10/20', overdue: false });
+  assert.deepEqual(L.dueLabel('2026-10-06', now), { text: '2日超過', overdue: true });
+  assert.equal(L.dueLabel(null, now), null);
+});
+
+test('setDue: 設定・解除ができ、不正値や不明IDは拒否', () => {
+  const todos = [mk('a')];
+  assert.equal(L.setDue(todos, 'a', '2026-10-08'), true);
+  assert.equal(L.byId(todos, 'a').due, '2026-10-08');
+  assert.equal(L.setDue(todos, 'a', 'bad'), false);
+  assert.equal(L.byId(todos, 'a').due, '2026-10-08');
+  assert.equal(L.setDue(todos, 'a', ''), true);
+  assert.equal(L.byId(todos, 'a').due, null);
+  assert.equal(L.setDue(todos, 'zzz', '2026-10-08'), false);
 });

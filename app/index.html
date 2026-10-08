@@ -71,7 +71,7 @@
     background-clip: text;
     color: transparent;
   }
-  .title .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .title .sub { display: none; font-size: 11px; color: var(--muted); margin-top: 2px; }
   .hbtn {
     -webkit-app-region: no-drag;
     width: 26px; height: 26px;
@@ -268,10 +268,13 @@
     border-color: transparent;
     box-shadow: 0 0 10px rgba(126,224,255,0.5);
   }
-  li.done .chk::after { content: "✓"; color: #0a0e1a; font-size: 12px; font-weight: 800; }
+  li.done .chk::after {
+    content: ""; width: 4px; height: 8px; margin-top: -2px;
+    border: solid #0a0e1a; border-width: 0 2px 2px 0; transform: rotate(45deg);
+  }
   li.blocked .chk { border-style: dashed; border-color: rgba(255,211,110,0.7); cursor: not-allowed; }
 
-  .lock { flex: none; font-size: 11px; opacity: .85; }
+  .lock { flex: none; display: grid; place-items: center; color: var(--pred); opacity: .9; }
   .txt {
     flex: 1; min-width: 0;
     font-size: 13px; line-height: 1.4;
@@ -366,15 +369,59 @@
   }
   .switch input:checked + .track { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
   .switch input:checked + .track::after { transform: translateX(16px); }
-  .hint { margin-top: 4px; font-size: 10px; opacity: .8; line-height: 1.5; }
 
   .toast {
-    position: absolute; left: 50%; bottom: 96px; transform: translate(-50%, 8px);
+    position: absolute; left: 50%; bottom: 78px; transform: translate(-50%, 8px);
     padding: 7px 14px; border-radius: 10px; font-size: 12px; color: var(--text);
     background: rgba(10,14,28,0.92); border: 1px solid rgba(255,211,110,0.45);
     opacity: 0; pointer-events: none; transition: all .2s; white-space: nowrap;
   }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ---------- 行アイコン(SVG) ---------- */
+  .grip svg, .fold svg { display: block; margin: auto; }
+  .fold { display: grid; place-items: center; }
+  .fold svg { transition: transform .15s; }
+  .fold.open svg { transform: rotate(90deg); }
+  .act svg { display: block; }
+  .chip button { display: grid; place-items: center; padding: 0; }
+
+  /* ---------- 期限: 近づくほど赤いグラデーションが濃くなる(--u: 0〜1) ---------- */
+  li { --u: 0; }
+  .row, .deps { position: relative; z-index: 1; }
+  li.urgent::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(90deg,
+      rgba(255, 66, 90, calc(0.04 + 0.50 * var(--u))) 0%,
+      rgba(255, 66, 90, calc(0.02 + 0.14 * var(--u))) 68%,
+      rgba(255, 66, 90, 0) 100%);
+    box-shadow: inset 3px 0 0 rgba(255, 66, 90, calc(0.15 + 0.85 * var(--u)));
+  }
+  .due {
+    flex: none; border: none; cursor: pointer; white-space: nowrap;
+    font: 600 10px/1 "Segoe UI", "Yu Gothic UI", system-ui, sans-serif;
+    padding: 3px 7px; border-radius: 8px;
+    background: rgba(255,255,255,0.08); color: var(--muted);
+    transition: background .15s, color .15s;
+  }
+  .due:hover { background: rgba(255,255,255,0.16); color: var(--text); }
+  li.urgent .due {
+    background: rgba(255, 66, 90, calc(0.12 + 0.50 * var(--u)));
+    color: #ffc9d0;
+  }
+  li.overdue .due { background: rgba(255, 66, 90, 0.88); color: #fff; }
+  li.done .due { opacity: .45; }
+  .date-in { position: absolute; right: 8px; top: 4px; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+  /* ---------- タイトルバーだけ表示(折りたたみ) ---------- */
+  .ic-dn { display: none; }
+  html.collapsed .ic-up { display: none; }
+  html.collapsed .ic-dn { display: block; }
+  html.collapsed .title .sub { display: block; }
+  html.collapsed .progress, html.collapsed .add, html.collapsed ul,
+  html.collapsed footer, html.collapsed .toast, html.collapsed .pop,
+  html.collapsed #layoutBtn { display: none !important; }
+  html.collapsed header { height: 52px; padding: 0 12px 0 16px; }
 </style>
 </head>
 <body>
@@ -383,12 +430,18 @@
     <header>
       <div class="title">
         <h1>TODO</h1>
-        <div class="sub" id="date"></div>
+        <div class="sub" id="sub"></div>
       </div>
       <button class="hbtn" id="layoutBtn" title="位置とサイズ">
         <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
           <rect x="1.5" y="2.5" width="12" height="10" rx="2.2" stroke="currentColor" stroke-width="1.4"/>
           <rect x="8.2" y="4.6" width="3.6" height="4.6" rx="1.1" fill="currentColor"/>
+        </svg>
+      </button>
+      <button class="hbtn" id="collapseBtn" title="タイトルバーだけにする">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path class="ic-up" d="M3.5 8.8L7 5.4l3.5 3.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path class="ic-dn" d="M3.5 5.2L7 8.6l3.5-3.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
       <button class="hbtn" id="hide" title="隠す（トレイから再表示）">
@@ -450,7 +503,6 @@
           <i class="track"></i>
         </label>
       </div>
-      <div class="hint">⠿ ドラッグ：並べ替え／他タスクの中へ入れて親子に ・ ⛓ ドラッグ：別タスクへ落として先行関係</div>
     </footer>
   </div>
 </div>
@@ -462,6 +514,43 @@
   const $ = (id) => document.getElementById(id);
   let todos = [];
   let drag = null; // { id, mode: 'move' | 'link' }
+
+  // アイコンはすべてインラインSVG(静的文字列のみ。ユーザー入力は含めない)
+  const sv = (w, h, body) => `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
+  const ICON = {
+    grip: '<svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor"><circle cx="3" cy="3" r="1.15"/><circle cx="7" cy="3" r="1.15"/><circle cx="3" cy="7" r="1.15"/><circle cx="7" cy="7" r="1.15"/><circle cx="3" cy="11" r="1.15"/><circle cx="7" cy="11" r="1.15"/></svg>',
+    chev: sv(8, 8, '<path d="M2.6 1.2L5.6 4l-3 2.8"/>'),
+    lock: sv(12, 12, '<rect x="2.5" y="5.5" width="7" height="5" rx="1.4"/><path d="M4 5.5V4a2 2 0 014 0v1.5"/>'),
+    plus: sv(14, 14, '<path d="M7 3.2v7.6M3.2 7h7.6"/>'),
+    up: sv(14, 14, '<path d="M10.5 3.5v7"/><path d="M9 7H4M6 4.8L3.8 7 6 9.2"/>'),
+    cal: sv(14, 14, '<rect x="2" y="3" width="10" height="9" rx="2"/><path d="M2 6.2h10M4.8 1.8v2.4M9.2 1.8v2.4"/>'),
+    link: sv(14, 14, '<circle cx="3.6" cy="7" r="1.9"/><circle cx="10.4" cy="7" r="1.9"/><path d="M5.5 7h3"/>'),
+    del: sv(14, 14, '<path d="M4 4l6 6M10 4l-6 6"/>'),
+    xs: sv(8, 8, '<path d="M2 2l4 4M6 2L2 6"/>')
+  };
+  const icon = (cls, key, title) => {
+    const b = el('button', cls);
+    b.innerHTML = ICON[key];
+    if (title) b.title = title;
+    return b;
+  };
+
+  // 期限の見た目(赤みの強さ・ラベル)を反映する。時間経過でも呼び直す
+  function dueView(li, t) {
+    const lab = t.due ? L.dueLabel(t.due) : null;
+    const u = t.due && !t.done ? L.urgency(t.due) : 0;
+    li.style.setProperty('--u', u.toFixed(3));
+    li.classList.toggle('urgent', u > 0);
+    li.classList.toggle('overdue', !!(lab && lab.overdue && !t.done));
+    const chip = li.querySelector('.due');
+    if (chip && lab) { chip.textContent = lab.text; chip.title = '期限: ' + t.due + '（クリックで変更）'; }
+  }
+  function refreshDue() {
+    document.querySelectorAll('#list li').forEach((li) => {
+      const t = L.byId(todos, li.dataset.id);
+      if (t) dueView(li, t);
+    });
+  }
 
   const save = () => window.api.saveTodos(todos);
   const el = (tag, cls, text) => {
@@ -567,13 +656,15 @@
 
     const row = el('div', 'row');
 
-    const grip = el('span', 'grip', '⠿');
+    const grip = el('span', 'grip');
+    grip.innerHTML = ICON.grip;
     grip.draggable = true;
     grip.title = 'ドラッグで移動。他タスクの中央に落とすと子タスクになります';
     grip.addEventListener('dragstart', (e) => startDrag(e, t, li, 'move'));
     grip.addEventListener('dragend', endDrag);
 
-    const fold = el('span', 'fold', hasKids ? (t.collapsed ? '▸' : '▾') : '');
+    const fold = el('span', 'fold' + (hasKids && !t.collapsed ? ' open' : ''));
+    if (hasKids) fold.innerHTML = ICON.chev;
     if (hasKids) fold.onclick = () => { t.collapsed = !t.collapsed; save(); render(); };
 
     const chk = el('div', 'chk');
@@ -592,8 +683,26 @@
     txt.ondblclick = () => startEdit(txt, t);
 
     row.append(grip, fold, chk);
-    if (blocked && !t.done) row.append(el('span', 'lock', '🔒'));
+    if (blocked && !t.done) {
+      const lock = el('span', 'lock');
+      lock.innerHTML = ICON.lock;
+      lock.title = '先行タスクが未完了のため完了できません';
+      row.append(lock);
+    }
     row.append(txt);
+
+    // 期限: 日付ピッカー(透明なinput)を開くのは チップ / カレンダーボタン
+    const dueIn = el('input', 'date-in');
+    dueIn.type = 'date';
+    dueIn.tabIndex = -1;
+    dueIn.value = t.due || '';
+    dueIn.onchange = () => { L.setDue(todos, t.id, dueIn.value); save(); render(); };
+    const openPicker = () => { try { dueIn.showPicker(); } catch { dueIn.focus(); dueIn.click(); } };
+    if (t.due) {
+      const chip = el('button', 'due');
+      chip.onclick = openPicker;
+      row.append(chip);
+    }
 
     if (hasKids) {
       const ds = L.descendants(todos, t.id);
@@ -606,27 +715,27 @@
     }
 
     const acts = el('div', 'acts');
-    const addKid = el('button', 'act', '＋');
-    addKid.title = '子タスクを追加';
+    const addKid = icon('act', 'plus', '子タスクを追加');
     addKid.onclick = () => addChild(t);
     acts.append(addKid);
     if (t.parentId) {
-      const up = el('button', 'act', '⇤');
-      up.title = '親から外す（ひとつ上の階層へ）';
+      const up = icon('act', 'up', '親から外す（ひとつ上の階層へ）');
       up.onclick = () => { todos = L.moveTask(todos, t.id, t.parentId, 'after'); save(); render(); };
       acts.append(up);
     }
-    const link = el('button', 'act link', '⛓');
+    const cal = icon('act', 'cal', t.due ? '期限を変更・解除' : '期限を設定');
+    cal.onclick = openPicker;
+    const link = icon('act link', 'link');
     link.draggable = true;
     link.title = '別タスクへドラッグ＆ドロップ：このタスクが終わってから相手に着手（先行関係）';
     link.addEventListener('dragstart', (e) => startDrag(e, t, li, 'link'));
     link.addEventListener('dragend', endDrag);
-    const del = el('button', 'act del', '✕');
-    del.title = '削除（子タスクは一つ上の階層へ）';
+    const del = icon('act del', 'del', '削除（子タスクは一つ上の階層へ）');
     del.onclick = () => { todos = L.removeTask(todos, t.id); save(); render(); };
-    acts.append(link, del);
+    acts.append(cal, link, del);
     row.append(acts);
-    li.append(row);
+    li.append(row, dueIn);
+    dueView(li, t);
 
     if (t.after.length) {
       const deps = el('div', 'deps');
@@ -635,9 +744,8 @@
         if (!p) return;
         const chip = el('div', 'chip' + (p.done ? ' ok' : ''));
         chip.title = '先行タスク: ' + p.text;
-        const label = el('span', null, '⛓ ' + p.text);
-        const x = el('button', null, '✕');
-        x.title = '先行関係を解除';
+        const label = el('span', null, '先行 ' + p.text);
+        const x = icon(null, 'xs', '先行関係を解除');
         x.onclick = () => { t.after = t.after.filter((i) => i !== pid); save(); render(); };
         chip.append(label, x);
         deps.append(chip);
@@ -661,7 +769,7 @@
     const list = $('list');
     list.innerHTML = '';
     if (!todos.length) {
-      list.appendChild(el('div', 'empty', 'タスクはありません ✨'));
+      list.appendChild(el('div', 'empty', 'タスクはありません'));
     }
     const hidden = (t) => {
       let c = t;
@@ -679,6 +787,7 @@
     const total = todos.length;
     $('bar').style.width = total ? (done / total) * 100 + '%' : '0%';
     $('count').textContent = total ? `${done} / ${total} 完了` : '';
+    $('sub').textContent = $('count').textContent;
   }
 
   /* ---------- 編集・追加 ---------- */
@@ -707,7 +816,7 @@
   }
 
   function addChild(parent) {
-    const c = { id: L.uid(), text: '', done: false, parentId: parent.id, after: [], collapsed: false };
+    const c = { id: L.uid(), text: '', done: false, parentId: parent.id, after: [], collapsed: false, due: null };
     parent.collapsed = false;
     todos.push(c);
     render();
@@ -719,7 +828,7 @@
     if (e.key !== 'Enter' || e.isComposing) return;
     const v = e.target.value.trim();
     if (!v) return;
-    const t = { id: L.uid(), text: v, done: false, parentId: null, after: [], collapsed: false };
+    const t = { id: L.uid(), text: v, done: false, parentId: null, after: [], collapsed: false, due: null };
     todos.push(t);
     e.target.value = '';
     save(); render();
@@ -776,6 +885,7 @@
   /* ---------- 配置・サイズ（ミニ画面） ---------- */
   const G = window.GadgetLayout;
   let lay = null;
+  let closePop = () => {};
   const pct = (v) => (v * 100).toFixed(2) + '%';
   const rectStyle = (node, b, wa) => {
     node.style.left = pct((b.x - wa.x) / wa.width);
@@ -797,11 +907,11 @@
     document.querySelectorAll('.qk').forEach((k) => { k.textContent = S.corners[k.dataset.k]; });
     document.querySelectorAll('#seg button').forEach((b) => {
       b.querySelector('kbd').textContent = S.sizes[b.dataset.s];
-      b.onclick = () => window.api.sizePreset(b.dataset.s);
+      b.onclick = () => { window.api.sizePreset(b.dataset.s); closePop(); };
     });
     document.querySelectorAll('.q').forEach((q) => {
       const c = q.dataset.c;
-      q.onclick = () => window.api.snap(c);
+      q.onclick = () => { window.api.snap(c); closePop(); };
       // ホバーで「ここに移動します」の点線プレビュー
       q.onmouseenter = () => {
         if (!lay) return;
@@ -817,6 +927,7 @@
       $('layoutBtn').classList.toggle('on', open);
       if (open) renderLayout(await window.api.layoutState());
     };
+    closePop = () => setOpen(false);
     $('layoutBtn').onclick = () => setOpen(pop.hidden);
     document.addEventListener('mousedown', (e) => {
       if (!pop.hidden && !pop.contains(e.target) && !$('layoutBtn').contains(e.target)) setOpen(false);
@@ -825,11 +936,14 @@
     window.api.onLayout(renderLayout);
   }
 
-  function updateDate() {
-    const d = new Date();
-    const w = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
-    $('date').textContent = `${d.getMonth() + 1}月${d.getDate()}日 (${w})`;
+  // タイトルバーだけ表示(アプリは常駐のまま)。状態の正本はメインプロセス
+  function applyCollapsed(on) {
+    document.documentElement.classList.toggle('collapsed', !!on);
+    $('collapseBtn').title = on ? '元の大きさに戻す' : 'タイトルバーだけにする';
+    if (on) closePop();
   }
+  $('collapseBtn').onclick = () => window.api.toggleCollapse();
+  window.api.onCollapsed(applyCollapsed);
 
   (async () => {
     const data = await window.api.load();
@@ -837,8 +951,7 @@
     document.documentElement.classList.toggle('native', !!(data.env && data.env.nativeBlur));
     applySettings(data.settings);
     initLayoutUi();
-    updateDate();
-    setInterval(updateDate, 60 * 1000);
+    setInterval(refreshDue, 60 * 1000);
     render();
   })();
 </script>

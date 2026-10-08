@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('api', {
   setPin: (on) => ipcRenderer.send('set-pin', on),
   hide: () => ipcRenderer.send('hide'),
   quit: () => ipcRenderer.send('quit'),
+  toggleCollapse: () => ipcRenderer.send('toggle-collapse'),
+  onCollapsed: (cb) => ipcRenderer.on('collapsed-changed', (_e, v) => cb(v)),
   snap: (corner) => ipcRenderer.send('snap', corner),
   sizePreset: (key) => ipcRenderer.send('size-preset', key),
   layoutState: () => ipcRenderer.invoke('layout-state'),

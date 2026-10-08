@@ -4,6 +4,53 @@
 
   const byId = (todos, id) => todos.find((t) => t.id === id);
 
+  /* ---------- 期限（日付のみ。その日の終わりが締切） ---------- */
+  const DAY = 86400000;
+  const DUE_HORIZON_DAYS = 7; // 期限のこの日数前から赤くなり始める
+
+  // 'YYYY-MM-DD' を現地時間の0時の Date に。不正（存在しない日付含む）は null
+  function parseDue(due) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(typeof due === 'string' ? due : '');
+    if (!m) return null;
+    const [y, mo, d] = [+m[1], +m[2], +m[3]];
+    const dt = new Date(y, mo - 1, d);
+    return dt.getFullYear() === y && dt.getMonth() === mo - 1 && dt.getDate() === d ? dt : null;
+  }
+
+  function dueEnd(due) {
+    const d = parseDue(due);
+    return d ? new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime() - 1 : NaN;
+  }
+
+  // 0（余裕）〜 1（期限切れ）。期限に近づくほど線形に増える
+  function urgency(due, now = Date.now(), horizonDays = DUE_HORIZON_DAYS) {
+    const end = dueEnd(due);
+    if (Number.isNaN(end)) return 0;
+    return Math.min(1, Math.max(0, 1 - (end - now) / (horizonDays * DAY)));
+  }
+
+  function dueLabel(due, now = Date.now()) {
+    const d = parseDue(due);
+    if (!d) return null;
+    const n = new Date(now);
+    const days = Math.round((d - new Date(n.getFullYear(), n.getMonth(), n.getDate())) / DAY);
+    if (days < 0) return { text: `${-days}日超過`, overdue: true };
+    if (days === 0) return { text: '今日', overdue: false };
+    if (days === 1) return { text: '明日', overdue: false };
+    if (days < DUE_HORIZON_DAYS) return { text: `${days}日後`, overdue: false };
+    return { text: `${d.getMonth() + 1}/${d.getDate()}`, overdue: false };
+  }
+
+  // 空文字・null は解除。不正な日付は拒否
+  function setDue(todos, id, due) {
+    const t = byId(todos, id);
+    if (!t) return false;
+    if (due == null || due === '') { t.due = null; return true; }
+    if (!parseDue(due)) return false;
+    t.due = due;
+    return true;
+  }
+
   function normalize(list) {
     const items = (Array.isArray(list) ? list : []).map((t) => ({
       id: String(t.id),
@@ -11,7 +58,8 @@
       done: !!t.done,
       parentId: t.parentId != null ? String(t.parentId) : null,
       after: Array.isArray(t.after) ? t.after.map(String) : [],
-      collapsed: !!t.collapsed
+      collapsed: !!t.collapsed,
+      due: parseDue(t.due) ? String(t.due) : null
     }));
     const ids = new Set(items.map((t) => t.id));
     items.forEach((t) => {
@@ -149,7 +197,8 @@
 
   const api = {
     uid, byId, normalize, flatten, isDesc, descendants, depthOf,
-    dependsOn, isBlocked, canMove, canLink, moveTask, linkTask, removeTask, toggleDone
+    dependsOn, isBlocked, canMove, canLink, moveTask, linkTask, removeTask, toggleDone,
+    DUE_HORIZON_DAYS, parseDue, dueEnd, urgency, dueLabel, setDue
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TodoLogic = api;

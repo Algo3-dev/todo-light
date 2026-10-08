@@ -15,12 +15,13 @@
     modifier: 'Control+Alt',
     corners: { tl: 'Q', tr: 'E', bl: 'Z', br: 'C' },
     sizes: { s: '1', m: '2', l: '3' },
-    toggle: 'Space'
+    toggle: 'Space',
+    collapse: 'M'
   };
 
   // 作業領域に収まるサイズへ（最小サイズは作業領域の範囲内で確保）
   function fitSize(size, wa, margin = MARGIN) {
-    const fit = (v, avail, min, full) => Math.max(Math.min(v, avail - margin * 2), Math.min(min, full));
+    const fit = (v, avail, min, full) => Math.max(Math.min(v, avail - margin * 2), Math.min(min, full, v));
     return {
       width: fit(size.width, wa.width, MIN.width, wa.width),
       height: fit(size.height, wa.height, MIN.height, wa.height)
@@ -71,9 +72,12 @@
     };
   }
 
-  // 最寄りの角を固定したままサイズだけ変える
-  function resizeAnchored(b, wa, sizeKey) {
-    const { width, height } = fitSize(SIZES[sizeKey], wa);
+  // タイトルバーだけ表示する高さ。ネイティブ背景は枠なし、透過ガラスは外周余白(10px×2)が付く
+  const collapsedHeight = (native) => 52 + (native ? 0 : 22);
+
+  // 最寄りの角を固定したまま任意サイズへ変える
+  function resizeAnchoredTo(b, wa, size) {
+    const { width, height } = fitSize(size, wa);
     const c = nearestCorner(b, wa);
     return fitInside({
       x: c[1] === 'l' ? b.x : b.x + b.width - width,
@@ -83,9 +87,12 @@
     }, wa);
   }
 
+  const resizeAnchored = (b, wa, sizeKey) => resizeAnchoredTo(b, wa, SIZES[sizeKey]);
+
   const api = {
     MARGIN, MIN, SIZES, CORNERS, SHORTCUTS,
-    fitSize, cornerBounds, detectCorner, detectSize, nearestCorner, fitInside, resizeAnchored
+    fitSize, cornerBounds, detectCorner, detectSize, nearestCorner, fitInside,
+    collapsedHeight, resizeAnchoredTo, resizeAnchored
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.GadgetLayout = api;

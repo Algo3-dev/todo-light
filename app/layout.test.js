@@ -120,9 +120,37 @@ test('SHORTCUTS: 全アクションにキーが割り当てられ、重複しな
   const keys = [
     ...Object.values(Lay.SHORTCUTS.corners),
     ...Object.values(Lay.SHORTCUTS.sizes),
-    Lay.SHORTCUTS.toggle
+    Lay.SHORTCUTS.toggle,
+    Lay.SHORTCUTS.collapse
   ];
   assert.equal(new Set(keys).size, keys.length);
   for (const c of Lay.CORNERS) assert.ok(Lay.SHORTCUTS.corners[c]);
   for (const k of Object.keys(Lay.SIZES)) assert.ok(Lay.SHORTCUTS.sizes[k]);
+});
+
+/* ---------- タイトルバーだけの折りたたみ ---------- */
+test('collapsedHeight: ネイティブ背景は枠なし、透過ガラスは余白ぶん高い', () => {
+  assert.ok(Lay.collapsedHeight(false) > Lay.collapsedHeight(true));
+  assert.ok(Lay.collapsedHeight(true) < Lay.MIN.height);
+});
+
+test('fitSize / cornerBounds: 最小サイズ未満の高さ(折りたたみ)は引き上げない', () => {
+  const h = Lay.collapsedHeight(true);
+  assert.equal(Lay.fitSize({ width: 380, height: h }, WA).height, h);
+  assert.equal(Lay.cornerBounds(WA, 'bl', { width: 380, height: h }).y, 1040 - h - M);
+});
+
+test('detectCorner: 折りたたみ高さでも下の角を判定できる', () => {
+  const b = Lay.cornerBounds(WA, 'bl', { width: 380, height: Lay.collapsedHeight(true) });
+  assert.equal(Lay.detectCorner(b, WA), 'bl');
+});
+
+test('resizeAnchoredTo: 任意サイズへ最寄りの角を固定して変更', () => {
+  const br = Lay.cornerBounds(WA, 'br', size('m'));
+  const h = Lay.collapsedHeight(true);
+  const r = Lay.resizeAnchoredTo(br, WA, { width: br.width, height: h });
+  assert.equal(r.height, h);
+  assert.equal(r.y + r.height, br.y + br.height); // 下端固定
+  const back = Lay.resizeAnchoredTo(r, WA, { width: br.width, height: 560 });
+  assert.deepEqual(back, br); // 元に戻る
 });
