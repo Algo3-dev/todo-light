@@ -30,6 +30,7 @@ main.js (main: ウィンドウ・トレイ・グローバルショートカッ�
 
 - Electron 33.4.11(`TodoGadget.bat` の `VER` が正本。`%LOCALAPPDATA%\TodoGadget\runtime` に展開)
   - **Electron を更新するときは `VER` と `SHA256` を必ずセットで変える。** 値は `https://github.com/electron/electron/releases/download/v<VER>/SHASUMS256.txt` の `electron-v<VER>-win32-x64.zip` の行。実ファイルの `sha256sum` とも突き合わせること
+  - `TodoGadget.bat` の PowerShell は、モジュール由来のコマンド(`Get-FileHash` 等)に頼らず .NET を直接使う。PowerShell 7 から起動された環境では `PSModulePath` が引き継がれ、Windows PowerShell 5.1 が非互換のモジュールを拾って `Get-FileHash` が使えなくなる実例があった(検証が常に失敗して初回起動できなくなる)。bat のダウンロード行を変えたら、行を取り出して正しい/誤ったハッシュの両方で実行し、終了コード 0 / 2 を確認すること
   - `.bat` / `.vbs` は `.gitattributes` で CRLF に固定している(LF だけの bat は `goto` / ラベルが誤動作することがある)。編集後に改行が LF になっていないか注意
 - 素の JavaScript(ビルド工程・バンドラなし)
 - テスト: Node.js 組み込みの `node:test`(開発時のみ。配布物には不要)
