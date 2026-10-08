@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
-<title>Todo Gadget</title>
+<title>TODO Light</title>
 <style>
   :root {
     --op: 0.82;
@@ -58,7 +58,7 @@
     -webkit-app-region: drag;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     padding: 16px 16px 8px;
   }
   .title { flex: 1; }
@@ -71,10 +71,11 @@
     background-clip: text;
     color: transparent;
   }
+  .title h1 span { font-weight: 300; letter-spacing: 0.06em; }
   .title .sub { display: none; font-size: 11px; color: var(--muted); margin-top: 2px; }
   .hbtn {
     -webkit-app-region: no-drag;
-    width: 26px; height: 26px;
+    width: 24px; height: 26px;
     border: none; border-radius: 8px;
     background: rgba(255,255,255,0.06);
     color: var(--muted);
@@ -371,7 +372,7 @@
   .switch input:checked + .track::after { transform: translateX(16px); }
 
   .toast {
-    position: absolute; left: 50%; bottom: 108px; transform: translate(-50%, 8px);
+    position: absolute; left: 50%; bottom: 52px; transform: translate(-50%, 8px);
     padding: 7px 14px; border-radius: 10px; font-size: 12px; color: var(--text);
     background: rgba(10,14,28,0.92); border: 1px solid rgba(255,211,110,0.45);
     opacity: 0; pointer-events: none; transition: all .2s; white-space: nowrap;
@@ -380,14 +381,24 @@
 
   /* ---------- 背景の切替(Windows 11) ---------- */
   .frow[hidden] { display: none; }
-  .matseg { display: flex; gap: 4px; }
+  .matseg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
   .matseg button {
-    border: none; cursor: pointer; padding: 4px 9px; border-radius: 8px;
+    border: none; cursor: pointer; padding: 7px 0; border-radius: 9px;
     background: rgba(255,255,255,0.07); color: var(--text); font-size: 11px;
     transition: background .12s;
   }
   .matseg button:hover { background: rgba(255,255,255,0.16); }
   .matseg button.on { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #0a0e1a; font-weight: 700; }
+
+  /* 外観ポップオーバー */
+  .pop.wide { width: 232px; }
+  .prow { display: flex; align-items: center; gap: 10px; min-height: 32px; font-size: 12px; }
+  .prow[hidden] { display: none; }
+  .prow .pl { flex: none; min-width: 48px; color: var(--muted); }
+  .prow em { font-style: normal; min-width: 30px; text-align: right; color: var(--muted); }
+  .prow .switch { margin-left: auto; }
+  .prow.col { flex-direction: column; align-items: stretch; gap: 6px; padding: 6px 0; }
+  .prow.col .pl { min-width: 0; }
 
   /* ショートカットの競合表示 */
   .qk.ng, .seg kbd.ng { opacity: .45; text-decoration: line-through; }
@@ -436,7 +447,7 @@
   html.collapsed .title .sub { display: block; }
   html.collapsed .progress, html.collapsed .add, html.collapsed ul,
   html.collapsed footer, html.collapsed .toast, html.collapsed .pop,
-  html.collapsed #layoutBtn { display: none !important; }
+  html.collapsed #layoutBtn, html.collapsed #lookBtn { display: none !important; }
   html.collapsed header { height: 52px; padding: 0 12px 0 16px; }
 </style>
 </head>
@@ -445,9 +456,15 @@
   <div class="panel">
     <header>
       <div class="title">
-        <h1>TODO</h1>
+        <h1>TODO <span>Light</span></h1>
         <div class="sub" id="sub"></div>
       </div>
+      <button class="hbtn" id="lookBtn" title="外観（透過度・背景・最前面）">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+          <circle cx="7.5" cy="7.5" r="5.4" stroke="currentColor" stroke-width="1.4"/>
+          <path d="M7.5 2.1a5.4 5.4 0 010 10.8z" fill="currentColor"/>
+        </svg>
+      </button>
       <button class="hbtn" id="layoutBtn" title="位置とサイズ">
         <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
           <rect x="1.5" y="2.5" width="12" height="10" rx="2.2" stroke="currentColor" stroke-width="1.4"/>
@@ -471,6 +488,30 @@
         </svg>
       </button>
     </header>
+
+    <div class="pop wide" id="popLook" hidden>
+      <div class="pop-h"><b>外観</b></div>
+      <div class="prow">
+        <span class="pl">透過度</span>
+        <input type="range" id="tr" min="0" max="85" step="1">
+        <em id="trv"></em>
+      </div>
+      <div class="prow col" id="matRow" hidden title="切り替えるとアプリが再起動します">
+        <span class="pl">背景（切り替えると再起動）</span>
+        <div class="matseg">
+          <button data-m="transparent">ガラス</button>
+          <button data-m="acrylic">アクリル</button>
+          <button data-m="mica">マイカ</button>
+        </div>
+      </div>
+      <div class="prow">
+        <span class="pl">常に最前面</span>
+        <label class="switch" title="常に最前面に表示">
+          <input type="checkbox" id="top">
+          <i class="track"></i>
+        </label>
+      </div>
+    </div>
 
     <div class="pop" id="pop" hidden>
       <div class="pop-h"><b>配置</b><span>Ctrl + Alt + キー</span></div>
@@ -508,25 +549,6 @@
       <div class="frow">
         <span class="count" id="count"></span>
         <button class="clear" id="clear">完了を削除</button>
-      </div>
-      <div class="frow">
-        <label class="slider">透過度
-          <input type="range" id="tr" min="0" max="85" step="1">
-          <em id="trv"></em>
-        </label>
-        <label class="switch" title="常に最前面に表示">
-          <span>最前面</span>
-          <input type="checkbox" id="top">
-          <i class="track"></i>
-        </label>
-      </div>
-      <div class="frow" id="matRow" hidden title="切り替えるとアプリが再起動します">
-        <span class="count">背景</span>
-        <div class="matseg">
-          <button data-m="transparent">ガラス</button>
-          <button data-m="acrylic">アクリル</button>
-          <button data-m="mica">マイカ</button>
-        </div>
       </div>
     </footer>
   </div>
@@ -910,7 +932,32 @@
   /* ---------- 配置・サイズ（ミニ画面） ---------- */
   const G = window.GadgetLayout;
   let lay = null;
-  let closePop = () => {};
+
+  // ポップオーバー(配置・外観)は同時に1つだけ開く
+  const POPS = {
+    layout: { el: $('pop'), btn: $('layoutBtn') },
+    look: { el: $('popLook'), btn: $('lookBtn') }
+  };
+  let currentPop = null;
+  async function setPop(name) {
+    currentPop = name;
+    for (const [k, p] of Object.entries(POPS)) {
+      p.el.hidden = k !== name;
+      p.btn.classList.toggle('on', k === name);
+    }
+    if (name === 'layout') renderLayout(await window.api.layoutState());
+  }
+  const closePop = () => setPop(null);
+  function initPopovers() {
+    $('layoutBtn').onclick = () => setPop(currentPop === 'layout' ? null : 'layout');
+    $('lookBtn').onclick = () => setPop(currentPop === 'look' ? null : 'look');
+    document.addEventListener('mousedown', (e) => {
+      if (!currentPop) return;
+      const p = POPS[currentPop];
+      if (!p.el.contains(e.target) && !p.btn.contains(e.target)) closePop();
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && currentPop) closePop(); });
+  }
   const pct = (v) => (v * 100).toFixed(2) + '%';
   const rectStyle = (node, b, wa) => {
     node.style.left = pct((b.x - wa.x) / wa.width);
@@ -951,18 +998,6 @@
       q.onmouseleave = () => $('ghostPre').classList.remove('show');
     });
 
-    const pop = $('pop');
-    const setOpen = async (open) => {
-      pop.hidden = !open;
-      $('layoutBtn').classList.toggle('on', open);
-      if (open) renderLayout(await window.api.layoutState());
-    };
-    closePop = () => setOpen(false);
-    $('layoutBtn').onclick = () => setOpen(pop.hidden);
-    document.addEventListener('mousedown', (e) => {
-      if (!pop.hidden && !pop.contains(e.target) && !$('layoutBtn').contains(e.target)) setOpen(false);
-    });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pop.hidden) setOpen(false); });
     window.api.onLayout(renderLayout);
   }
 
@@ -990,6 +1025,7 @@
     todos = L.normalize(data.todos);
     document.documentElement.classList.toggle('native', !!(data.env && data.env.nativeBlur));
     applySettings(data.settings);
+    initPopovers();
     initLayoutUi((data.env && data.env.shortcuts) || {});
     initMaterial(data.env || {});
     setInterval(refreshDue, 60 * 1000);
